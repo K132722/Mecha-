@@ -2821,112 +2821,40 @@ async function clearAppOfflineCache() {
 // ========================================================================
 // 25. تهيئة التطبيق
 // ========================================================================
+// ================================================================
+// ✅ طلب إذن الإشعارات
+// ================================================================
 
-function initNotifications() {
-    loadNotificationsFromStorage();
+async function requestNotificationPermission() {
+    console.log('🔔 جاري طلب إذن الإشعارات...');
     
-    setTimeout(async () => {
-        try {
-            const permission = await requestNotificationPermission();
-            if (permission) {
-                console.log('✅ Notification permission granted');
-                await initFCM();
-            } else {
-                console.warn('⚠️ Notification permission denied');
-            }
-        } catch (e) {
-            console.warn('⚠️ Notification initialization error:', e);
-        }
-    }, 2000);
-}
-
-function initStudyApp() {
-    initFirebase();
-
-    let user = getStudyUser();
-    if (!user) {
-        user = { name: 'زائر (أوفلاين)', role: 'student', phone: '' };
+    if (!('Notification' in window)) {
+        console.warn('⚠️ المتصفح لا يدعم الإشعارات');
+        return false;
     }
-
-    currentStudyUser = user;
+    
+    if (Notification.permission === 'granted') {
+        console.log('✅ الإذن ممنوح مسبقاً');
+        return true;
+    }
+    
+    if (Notification.permission === 'denied') {
+        console.warn('⚠️ الإذن مرفوض من قبل المستخدم');
+        return false;
+    }
     
     try {
-        updateBreadcrumb();
-        updateButtons();
-        handleUrlParams();
-        loadCurrentFolder();
-    } catch (e) {
-        console.error("خطأ أثناء بناء الواجهة محلياً:", e);
+        const permission = await Notification.requestPermission();
+        console.log('📨 نتيجة طلب الإذن:', permission);
+        return permission === 'granted';
+    } catch (error) {
+        console.error('❌ خطأ في طلب الإذن:', error);
+        return false;
     }
-
-    if (navigator.onLine && studyDb) {
-        startNotificationListener();
-    }
-
-    document.addEventListener('click', (e) => {
-        if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
-            e.target.classList.remove('active');
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeModal('createFolderModal');
-            closeModal('editFolderModal');
-            closeModal('createPostModal');
-            closeModal('editPostModal');
-            closeFilePreview();
-            const uploadOverlay = document.getElementById('uploadProgressOverlay');
-            if (uploadOverlay) uploadOverlay.style.display = 'none';
-        }
-    });
-
-    // تهيئة الإشعارات
-    initNotifications();
-    
-    // بدء Keep-Alive
-    startRenderKeepAlive();
-
-    console.log('✅ تم تشغيل واجهة المواد الدراسية بنجاح');
 }
 
-// ========================================================================
-// 26. تشغيل التطبيق
-// ========================================================================
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initStudyApp);
-} else {
-    initStudyApp();
-}
-
-// تهيئة الإشعارات عند تحميل الصفحة
-// ... الكود السابق ...
-
 // ================================================================
-// ✅ تهيئة الإشعارات ونظام Keep-Alive عند تحميل الصفحة
-// ================================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. تحميل الإشعارات المحفوظة
-    loadNotificationsFromStorage();
-    
-    // 2. فتح نافذة الإشعارات إذا طلب ذلك
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('openNotifications') === 'true') {
-        setTimeout(() => toggleNotificationsPanel(), 500);
-    }
-    
-    // 3. ✅ تشغيل نظام Keep-Alive (مثل OneSignal)
-    startPageKeepAlive();
-    setInterval(refreshServiceWorker, 5 * 60 * 1000);
-    console.log('✅ Keep-alive system started (like OneSignal)');
-});
-
-console.log('✅ نظام الإشعارات المتقدم تم تشغيله بنجاح!');
-
-// ================================================================
-// ✅ نظام Keep-Alive (مثل OneSignal)
+// ✅ Keep-Alive (مثل OneSignal)
 // ================================================================
 
 function startPageKeepAlive() {
@@ -2970,3 +2898,105 @@ if ('serviceWorker' in navigator) {
         }
     });
 }
+
+// ================================================================
+// ✅ تهيئة الإشعارات (ستطلب الإذن تلقائياً)
+// ================================================================
+
+function initNotifications() {
+    console.log('🔔 بدء تهيئة الإشعارات...');
+    
+    loadNotificationsFromStorage();
+    
+    // فتح نافذة الإشعارات إذا طلب ذلك
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openNotifications') === 'true') {
+        setTimeout(() => toggleNotificationsPanel(), 500);
+    }
+    
+    setTimeout(async () => {
+        try {
+            const permission = await requestNotificationPermission();
+            if (permission) {
+                console.log('✅ إذن الإشعارات ممنوح');
+                if (typeof firebase !== 'undefined' && firebase.messaging) {
+                    await initFCM();
+                }
+            } else {
+                console.warn('⚠️ لم يتم الحصول على إذن الإشعارات');
+            }
+        } catch (e) {
+            console.warn('⚠️ خطأ في تهيئة الإشعارات:', e);
+        }
+    }, 2000);
+}
+
+// ================================================================
+// ✅ تهيئة التطبيق (الرئيسية)
+// ================================================================
+
+function initStudyApp() {
+    console.log('🚀 بدء تهيئة التطبيق...');
+    
+    initFirebase();
+
+    let user = getStudyUser();
+    if (!user) {
+        user = { name: 'زائر (أوفلاين)', role: 'student', phone: '' };
+    }
+
+    currentStudyUser = user;
+    
+    try {
+        updateBreadcrumb();
+        updateButtons();
+        handleUrlParams();
+        loadCurrentFolder();
+    } catch (e) {
+        console.error("خطأ أثناء بناء الواجهة محلياً:", e);
+    }
+
+    if (navigator.onLine && studyDb) {
+        startNotificationListener();
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
+            e.target.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeModal('createFolderModal');
+            closeModal('editFolderModal');
+            closeModal('createPostModal');
+            closeModal('editPostModal');
+            closeFilePreview();
+            const uploadOverlay = document.getElementById('uploadProgressOverlay');
+            if (uploadOverlay) uploadOverlay.style.display = 'none';
+        }
+    });
+
+    // ✅ تهيئة الإشعارات (ستطلب الإذن)
+    initNotifications();
+    
+    // ✅ بدء Keep-Alive
+    startPageKeepAlive();
+    setInterval(refreshServiceWorker, 5 * 60 * 1000);
+    startRenderKeepAlive();
+
+    console.log('✅ تم تشغيل واجهة المواد الدراسية بنجاح');
+}
+
+// ================================================================
+// ✅ تشغيل التطبيق (مرة واحدة فقط)
+// ================================================================
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStudyApp);
+} else {
+    initStudyApp();
+}
+
+console.log('✅ نظام الإشعارات المتقدم جاهز!');
