@@ -1,8 +1,8 @@
-// firebase-messaging-sw.js
+// firebase-messaging-sw.js - نسخة محسّنة (مثل OneSignal)
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-// تهيئة Firebase
+// ====== تهيئة Firebase ======
 firebase.initializeApp({
     apiKey: "AIzaSyCGUTMbiVWspimLsTk9JQ9eExm-XuhkXKY",
     authDomain: "pwa-app-a8e58.firebaseapp.com",
@@ -15,40 +15,90 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ====== معالجة الإشعارات الخلفية ======
+// ====== ✅ تقنية Keep-Alive (مثل OneSignal) ======
+let keepAliveInterval = null;
+let lastPing = Date.now();
+
+function startKeepAlive() {
+    if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+    }
+    
+    keepAliveInterval = setInterval(() => {
+        const now = Date.now();
+        lastPing = now;
+        
+        self.clients.matchAll().then(clients => {
+            clients.forEach(client => {
+                client.postMessage({ 
+                    type: 'KEEP_ALIVE_PING',
+                    timestamp: now
+                });
+            });
+        });
+        
+        console.log('💓 Keep-alive ping sent');
+    }, 15000);
+}
+
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+    startKeepAlive();
+    console.log('✅ Service Worker installed with keep-alive');
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+    startKeepAlive();
+    console.log('✅ Service Worker activated with keep-alive');
+});
+
+// ====== ✅ معالجة الإشعارات الخلفية ======
 messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message:', payload);
+    console.log('📨 Received background message:', payload);
     
     const notificationTitle = payload.notification?.title || payload.data?.title || '📢 تحديث جديد';
     const notificationBody = payload.notification?.body || payload.data?.body || '';
     const notificationData = payload.data || {};
     
-    const notificationOptions = {
-        body: notificationBody,
-        icon: '/logo.png',
-        badge: '/logo.png',
-        data: {
-            path: notificationData.path || '',
-            postIndex: notificationData.postIndex || '',
-            type: notificationData.type || 'notification',
-            click_action: '/study-materials.html'
-        },
-        tag: notificationData.path || 'notification',
-        requireInteraction: true,
-        vibrate: [200, 100, 200],
-        actions: [
-            { action: 'open', title: '📂 عرض' },
-            { action: 'dismiss', title: 'إغلاق' }
-        ]
-    };
+    // محاولة عرض الإشعار فوراً
+    showNotification(notificationTitle, notificationBody, notificationData);
     
-    // عرض الإشعار
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // محاولة ثانية بعد 2 ثانية
+    setTimeout(() => {
+        showNotification(notificationTitle, notificationBody, notificationData);
+    }, 2000);
 });
+
+function showNotification(title, body, data) {
+    try {
+        const options = {
+            body: body || '📢 تحديث جديد في المواد الدراسية',
+            icon: '/logo.png',
+            badge: '/logo.png',
+            data: data || {},
+            tag: data?.path || 'notification',
+            requireInteraction: true,
+            vibrate: [200, 100, 200],
+            actions: [
+                { action: 'open', title: '📂 فتح التطبيق' },
+                { action: 'dismiss', title: 'إغلاق' }
+            ],
+            priority: 'high',
+            urgency: 'high'
+        };
+        
+        self.registration.showNotification(title, options);
+        console.log('✅ Notification shown successfully');
+        
+    } catch (error) {
+        console.error('❌ Failed to show notification:', error);
+    }
+}
 
 // ====== معالجة النقر على الإشعار ======
 self.addEventListener('notificationclick', function(event) {
-    console.log('[firebase-messaging-sw.js] Notification click received:', event);
+    console.log('🔔 Notification clicked:', event);
     
     event.notification.close();
     
@@ -56,7 +106,6 @@ self.addEventListener('notificationclick', function(event) {
     const path = data.path || '';
     const postIndex = data.postIndex;
     
-    // بناء رابط الوجهة
     let urlToOpen = '/study-materials.html';
     const params = new URLSearchParams();
     
@@ -72,7 +121,6 @@ self.addEventListener('notificationclick', function(event) {
         urlToOpen += '?' + params.toString();
     }
     
-    // فتح النافذة
     event.waitUntil(
         clients.matchAll({ type: 'window' }).then((clientList) => {
             for (const client of clientList) {
@@ -89,15 +137,4 @@ self.addEventListener('notificationclick', function(event) {
     );
 });
 
-// ====== استقبال رسائل من الإشعارات ======
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'REQUEST_NOTIFICATION') {
-        // الرد على الطلب
-        event.ports[0].postMessage({ 
-            status: 'ready',
-            swVersion: '1.0.0'
-        });
-    }
-});
-
-console.log('[firebase-messaging-sw.js] Service Worker initialized successfully!');
+console.log('✅ FCM Service Worker initialized (Enhanced)');
