@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>منظومة الميكاترونكس الهندسية</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#070d19">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- شاشة تسجيل الدخول -->
+<div class="login-overlay" id="loginOverlay">
+    <div class="glass-card login-card">
+        <img src="logo.png" alt="الشعار" class="login-logo" onerror="this.style.display='none'">
+        <h2>تسجيل الدخول للمنظومة</h2>
+        <div class="input-group">
+            <label>رقم الهاتف:</label>
+            <input type="tel" id="phoneInput" placeholder="77XXXXXXX">
+        </div>
+        <div class="input-group">
+            <label>رمز الدخول:</label>
+            <input type="password" id="codeInput" placeholder="******">
+        </div>
+        <button id="loginBtn" class="glass-btn primary-btn">دخول</button>
+        <p id="loginMsg" class="status-msg"></p>
+    </div>
+</div>
+
+<!-- الواجهة الرئيسية -->
+<div class="app-container" id="appContent" style="display:none;">
+
+    <!-- 1. الترويسة العليا -->
+    <header class="glass-card header-card">
+        <div class="header-main-info">
+            <img src="logo.png" alt="شعار التطبيق" class="app-logo-prominent" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23f3c623\'/></svg>'">
+            <div class="user-details">
+                <h2 id="userNameDisplay">مرحباً المهندس ...</h2>
+                <span class="user-role-badge" id="userRoleDisplay">مدير النظام</span>
+            </div>
+        </div>
+        
+        <div class="header-actions">
+            <span id="netStatusBadge" class="net-badge online">⚡ متصل</span>
+            <button id="btnNotifCenter" class="icon-btn" title="الإشعارات">🔔</button>
+            <button id="btnLogout" class="icon-btn danger" title="خروج">🚪</button>
+        </div>
+    </header>
+
+    <!-- 2. حاوية الإعلانات الكبيرة (Hero Offline Banner) -->
+    <section class="glass-card banner-card">
+        <div class="banner-header">
+            <span class="banner-tag">📢 الإعلانات والتعميمات</span>
+            <span id="bannerDate" class="banner-date">--:--</span>
+        </div>
+
+        <div id="bannerDisplayArea" class="banner-display-area">
+            <div class="empty-banner">جاري تحميل الإعلان...</div>
+        </div>
+
+        <!-- أزرار التحكم بالحاوية -->
+        <div class="banner-controls">
+            <button id="btnRefreshData" class="glass-btn secondary-btn mini-btn">🔄 تحديث البيانات</button>
+            <button id="btnAdminAddBanner" class="glass-btn primary-btn mini-btn" style="display:none;">➕ إدراج إعلان جديد (أبو جراح)</button>
+        </div>
+    </section>
+
+    <!-- 3. الأزرار والقوائم الرئيسية -->
+    <section class="main-menu-grid">
+        <!-- أيقونة المواد الدراسية -->
+        <button class="glass-card menu-card" id="btnStudyMaterials">
+            <div class="menu-icon">📚</div>
+            <div class="menu-text">
+                <h3>المواد الدراسية</h3>
+                <p>المقررات والمستندات</p>
+            </div>
+        </button>
+
+        <!-- أيقونة مراقبة الأعضاء والأمان (خاصة بأبو جراح أو تفاعلية للجميع) -->
+        <button class="glass-card menu-card" id="btnUsersData">
+            <div class="menu-icon">👥</div>
+            <div class="menu-text">
+                <h3>بيانات الأعضاء والأجهزة</h3>
+                <p>مراقبة نشاط الأجهزة والتسريب</p>
+            </div>
+        </button>
+    </section>
+
+</div>
+
+<!-- نافذة إضافة إعلان جديد (أبو جراح فقط) -->
+<div class="modal-overlay" id="addBannerModal">
+    <div class="glass-card modal-box">
+        <h3>➕ إدراج إعلان / تعميم جديد</h3>
+        <input type="text" id="bannerTitleInput" placeholder="عنوان الإعلان">
+        <textarea id="bannerTextInput" placeholder="تفاصيل الإعلان..."></textarea>
+        <input type="text" id="bannerLinkInput" placeholder="رابط إلكتروني (اختياري)">
+        <label class="file-input-label">
+            اختر صورة للإعلان:
+            <input type="file" id="bannerImgInput" accept="image/*">
+        </label>
+        <div class="modal-actions">
+            <button id="btnPublishBanner" class="glass-btn primary-btn">نشر واستبدال السابق</button>
+            <button onclick="closeModal('addBannerModal')" class="glass-btn danger-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة عرض بيانات الأعضاء ومراقبة الأجهزة -->
+<div class="modal-overlay" id="usersDataModal">
+    <div class="glass-card modal-box large-modal">
+        <h3>👥 سجل أجهزة الأعضاء وتتبع التسريب</h3>
+        <div id="usersDevicesList" class="users-list-container">
+            <p>جاري جالب بيانات النشاط والأجهزة...</p>
+        </div>
+        <div class="modal-actions">
+            <button onclick="closeModal('usersDataModal')" class="glass-btn secondary-btn">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script src="app.js"></script>
+<!-- ====== تسجيل Service Worker ====== -->
+<script>
+    // تسجيل Service Worker للتطبيق
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('✅ SW registered:', reg))
+            .catch(err => console.error('❌ SW registration failed:', err));
+        
+        // تسجيل Service Worker الخاص بـ Firebase Messaging
+        navigator.serviceWorker.register('./firebase-messaging-sw.js')
+            .then(reg => console.log('✅ FCM SW registered:', reg))
+            .catch(err => console.error('❌ FCM SW registration failed:', err));
+    }
+</script>
+</body>
+</html>

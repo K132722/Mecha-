@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+    <title>المواد الدراسية - منظومة الميكاترونكس</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a192f">
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ====== أنماط خاصة بصفحة المواد الدراسية ====== */
+        .study-container {
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-top: 12px;
+            padding-bottom: 30px;
+        }
+
+        /* شريط المسار (Breadcrumb) */
+        .breadcrumb-bar {
+            background: rgba(12, 25, 45, 0.5);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            border-radius: 16px;
+            padding: 12px 18px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .breadcrumb-bar .crumb {
+            cursor: pointer;
+            color: var(--text-gold);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .breadcrumb-bar .crumb:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: #fff;
+        }
+
+        .breadcrumb-bar .crumb-sep {
+            color: var(--text-dim);
+            font-size: 11px;
+        }
+
+        .breadcrumb-bar .crumb-current {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* ====== شريط البحث ====== */
+        .search-bar {
+            background: rgba(12, 25, 45, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:focus-within {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.05);
+        }
+
+        .search-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            font-family: 'Tajawal', sans-serif;
+            padding: 4px 0;
+        }
+
+        .search-bar input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .search-bar .search-icon {
+            color: var(--text-dim);
+            font-size: 18px;
+        }
+
+        .search-bar .search-clear {
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+            display: none;
+        }
+
+        .search-bar .search-clear.visible {
+            display: block;
+        }
+
+        /* ====== نتائج البحث ====== */
+        .search-results {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(12, 25, 45, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(212, 175, 55, 0.08);
+            border-radius: 16px;
+            padding: 12px;
+        }
+
+        .search-results.active {
+            display: flex;
+        }
+
+        .search-results .search-result-item {
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .search-results .search-result-item:hover {
+            background: rgba(212, 175, 55, 0.08);
+            transform: translateX(-4px);
+        }
+
+        .search-results .search-result-item .result-icon {
+            font-size: 18px;
+        }
+
+        .search-results .search-result-item .result-info {
+            flex: 1;
+        }
+
+        .search-results .search-result-item .result-info .result-title {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .search-results .search-result-item .result-info .result-path {
+            color: var(--text-dim);
+            font-size: 11px;
+        }
+
+        .search-results .search-result-item .result-badge {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--text-gold);
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .search-no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        /* رأس المجلد */
+        .folder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .folder-header h3 {
+            color: var(--gold-secondary);
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .folder-header h3 .folder-icon {
+            font-size: 22px;
+        }
+
+        .action-btns-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--gold-primary);
+            color: #fff;
+        }
+
+        .btn-add-folder {
+            background: var(--gold-grad);
+            color: #060d18;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .btn-add-folder:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 30px rgba(212, 175, 55, 0.35);
+        }
+
+        .btn-add-post {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--success-color);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            padding: 8px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-add-post:hover {
+            background: rgba(74, 222, 128, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .btn-home-return {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-home-return:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--gold-primary);
+            color: #fff;
+        }
+
+        .btn-refresh {
+            background: rgba(52, 152, 219, 0.15);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            color: #5dade2;
+            padding: 8px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-refresh:hover {
+            background: rgba(52, 152, 219, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .btn-refresh:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* شبكة المجلدات */
+        .folders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 14px;
+        }
+
+        .folder-card {
+            background: rgba(12, 25, 45, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 18px 14px;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .folder-card:hover {
+            border-color: var(--gold-primary);
+            background: rgba(22, 42, 72, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.08);
+        }
+
+        .folder-card .folder-icon-big {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .folder-card .folder-name {
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .folder-card .folder-count {
+            color: var(--text-dim);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .folder-card .folder-actions-overlay {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            display: none;
+            gap: 6px;
+        }
+
+        .folder-card:hover .folder-actions-overlay {
+            display: flex;
+        }
+
+        .folder-card .folder-actions-overlay button {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder-card .folder-actions-overlay button:hover {
+            background: var(--gold-grad);
+            color: #060d18;
+        }
+
+        .folder-card .folder-actions-overlay .btn-delete-folder:hover {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        /* ====== قائمة المنشورات داخل المجلد ====== */
+        .posts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .post-card {
+            background: rgba(12, 25, 45, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            padding: 16px 18px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .post-card:hover {
+            border-color: rgba(212, 175, 55, 0.1);
+        }
+
+        .post-card .post-title {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+            text-align: center;
+            direction: ltr;
+            line-height: 1.4;
+        }
+
+        .post-card .post-text {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 6px;
+        }
+
+        .post-card .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-dim);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .post-card .post-meta .post-user {
+            color: var(--text-gold);
+        }
+
+        .post-card .post-file .doc-btn {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .post-card .post-file .doc-btn-view {
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            color: var(--text-gold);
+        }
+
+        .post-card .post-file .doc-btn-view:hover {
+            background: rgba(212, 175, 55, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .post-card .post-file .doc-btn-download {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            color: var(--success-color);
+        }
+
+        .post-card .post-file .doc-btn-download:hover {
+            background: rgba(74, 222, 128, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .post-card .post-file .offline-tag {
+            background: rgba(74, 222, 128, 0.12);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            color: var(--success-color);
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .post-card .post-file {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .post-card .doc-box {
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .post-card .download-progress-box {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .post-card .download-progress-box .download-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--gold-grad);
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        /* ====== أزرار إدارة المنشورات للمشرف ====== */
+        .post-admin-actions {
+            display: none;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            flex-wrap: wrap;
+        }
+
+        .post-admin-actions.visible {
+            display: flex;
+        }
+
+        .post-admin-actions .admin-btn {
+            padding: 4px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .post-admin-actions .admin-btn-edit {
+            background: rgba(52, 152, 219, 0.15);
+            color: #5dade2;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .post-admin-actions .admin-btn-edit:hover {
+            background: rgba(52, 152, 219, 0.25);
+        }
+
+        .post-admin-actions .admin-btn-delete {
+            background: rgba(255, 71, 87, 0.15);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.2);
+        }
+
+        .post-admin-actions .admin-btn-delete:hover {
+            background: rgba(255, 71, 87, 0.25);
+        }
+
+        /* ====== نافذة إنشاء مجلد ====== */
+        .modal-overlay.study-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(4, 10, 18, 0.88);
+            backdrop-filter: blur(25px) saturate(1.2);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+
+        .modal-overlay.study-modal.active {
+            display: flex;
+        }
+
+        .modal-box.study-modal-box {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 28px 24px;
+            background: rgba(12, 25, 45, 0.7);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 24px;
+            backdrop-filter: blur(30px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-box.study-modal-box h3 {
+            color: var(--gold-secondary);
+            font-size: 17px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .modal-box.study-modal-box input,
+        .modal-box.study-modal-box textarea {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .modal-box.study-modal-box input:focus,
+        .modal-box.study-modal-box textarea:focus {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.06);
+        }
+
+        .modal-box.study-modal-box textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .glass-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .glass-btn.primary-btn {
+            background: var(--gold-grad);
+            color: #060d18;
+        }
+
+        .glass-btn.primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.25);
+        }
+
+        .glass-btn.danger-btn {
+            background: rgba(255, 71, 87, 0.15);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.15);
+        }
+
+        .glass-btn.danger-btn:hover {
+            background: rgba(255, 71, 87, 0.25);
+        }
+
+        /* ====== نافذة تعديل منشور ====== */
+        .file-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .file-input-wrapper label {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px dashed rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* ====== شريط التقدم ====== */
+        .progress-bar-container {
+            display: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-bar-container.active {
+            display: block;
+        }
+
+        .progress-bar-container .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--gold-grad);
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        /* ====== نافذة تحميل الملفات (عجلة التحميل) ====== */
+        .upload-progress-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(4, 10, 18, 0.9);
+            backdrop-filter: blur(20px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 6000;
+            padding: 20px;
+        }
+
+        .upload-progress-overlay.active {
+            display: flex;
+        }
+
+        .upload-progress-box {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(12, 25, 45, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 24px;
+            padding: 30px 24px;
+            text-align: center;
+            backdrop-filter: blur(30px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+
+        .upload-progress-box .upload-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .upload-progress-box .upload-title {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .upload-progress-box .upload-status {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .upload-progress-box .upload-progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .upload-progress-box .upload-progress-track .upload-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gold-grad);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .upload-progress-box .upload-progress-text {
+            color: var(--text-gold);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .upload-progress-box .upload-file-name {
+            color: var(--text-dim);
+            font-size: 12px;
+            margin-top: 8px;
+            word-break: break-word;
+        }
+
+        /* ====== حالة فارغة ====== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* ====== نافذة معاينة الملف ====== */
+        .file-preview-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(4, 10, 18, 0.95);
+            backdrop-filter: blur(30px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 5000;
+            padding: 20px;
+        }
+
+        .file-preview-overlay.active {
+            display: flex;
+        }
+
+        .file-preview-box {
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            background: rgba(12, 25, 45, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow: hidden;
+        }
+
+        .file-preview-box .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .file-preview-box .preview-header h4 {
+            color: var(--gold-secondary);
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .file-preview-box .preview-close-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .file-preview-box .preview-close-btn:hover {
+            background: #ff4757;
+            border-color: #ff4757;
+        }
+
+        .file-preview-box .preview-content {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        .file-preview-box .preview-content img {
+            max-width: 100%;
+            max-height: 60vh;
+            border-radius: 8px;
+        }
+
+        .file-preview-box .preview-content iframe {
+            width: 100%;
+            height: 60vh;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .file-preview-box .preview-content .preview-loading {
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        .file-preview-box .preview-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .file-preview-box .preview-actions .preview-download-btn {
+            background: var(--gold-grad);
+            color: #060d18;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .file-preview-box .preview-actions .preview-download-btn:hover {
+            transform: scale(1.02);
+        }
+
+        /* ====== قائمة الضغط المطول ====== */
+        .long-press-menu {
+            position: fixed;
+            background: rgba(12, 25, 45, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--gold-primary);
+            border-radius: 14px;
+            padding: 8px 0;
+            z-index: 4000;
+            min-width: 180px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            display: none;
+        }
+
+        .long-press-menu .menu-item {
+            padding: 10px 18px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: right;
+        }
+
+        .long-press-menu .menu-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .long-press-menu .menu-item.danger {
+            color: #ff4757;
+        }
+
+        .long-press-menu .menu-item.danger:hover {
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        /* ====== استجابة ====== */
+        @media (max-width: 480px) {
+            .folders-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+            .folder-card {
+                padding: 14px 10px;
+            }
+            .folder-card .folder-icon-big {
+                font-size: 26px;
+            }
+            .folder-card .folder-name1 {
+                color: #fff;
+                font-size: 16px;
+                font-weight: 600;
+                word-break: break-word;
+            }
+            .breadcrumb-bar {
+                font-size: 11px;
+                padding: 10px 14px;
+                gap: 4px 6px;
+            }
+            .folder-header h3 {
+                font-size: 15px;
+            }
+            .btn-add-folder, .btn-add-post {
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+            .file-preview-box {
+                padding: 14px;
+            }
+            .file-preview-box .preview-content {
+                min-height: 200px;
+            }
+            .search-bar input {
+                font-size: 12px;
+            }
+            .upload-progress-box {
+                padding: 20px 16px;
+            }
+            .upload-progress-box .upload-icon {
+                font-size: 36px;
+            }
+        }
+
+        /* شبكة عرض البطاقات المربعة (مجلدات ومنشورات) */
+        #foldersGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            padding: 10px 0;
+        }
+
+        /* تنسيق اسم الملف داخل البطاقة */
+        .post-card .post-file,
+        .post-card .file-name,
+        .post-card .post-text {
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            word-break: break-all !important;
+            overflow-wrap: anywhere !important;
+            text-align: center !important;
+            direction: ltr !important;
+            line-height: 1.3 !important;
+            max-height: 2.6em !important;
+        }
+
+        /* تنسيق بطاقة المنشور المربعة */
+        .post-square-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            text-align: center;
+            padding: 12px 8px;
+            min-height: 150px;
+        }
+
+        /* زر أفعال الآدمين لبطاقات المنشورات المربعة */
+        .post-card-admin-actions {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .post-card-admin-actions button {
+            background: rgba(15, 23, 42, 0.6);
+            border: none;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        /* تفاصيل البيانات المضافة (الوقت والمستخدم والحجم) */
+        .post-meta-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 10px;
+            color: var(--text-dim, #94a3b8);
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .post-file-size {
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        /* أزرار المعاينة والحفظ بألوان محسنة ومتناسقة */
+        .post-square-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .doc-btn {
+            border: none;
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* زر معاينة - رمادي زجاجي أنيق */
+        .doc-btn-view {
+            background: rgba(255, 255, 255, 0.9);
+            color: #0f172a;
+        }
+        .doc-btn-view:hover {
+            background: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        /* زر حفظ - أزرق احترافي مريح */
+        .doc-btn-download {
+            background: #2563eb;
+            color: #ffffff;
+        }
+        .doc-btn-download:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        /* شارة الأوفلاين */
+        .offline-badge {
+            color: #10b981;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* الحاوية الكلية لاسم الملف */
+        .file-name-container {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 6px 0 !important;
+            gap: 2px !important;
+        }
+
+        /* السطر الأول والثاني لاسم الملف */
+        .file-name-line {
+            color: #ffffff !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            line-height: 1.35 !important;
+            text-align: center !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        /* السطر الثالث المنفصل لنوع الملف */
+        .file-ext-badge {
+            color: #94a3b8 !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            direction: ltr !important;
+            unicode-bidi: isolate !important;
+            margin-top: 1px !important;
+        }
+
+        /* تنسيق تفاصيل/وصف المنشور داخل البطاقة */
+        .post-details-text {
+            color: #cbd5e1 !important;
+            font-size: 6px !important;
+            line-height: 0.5 !important;
+            text-align: center !important;
+            margin: 4px 0 6px 0 !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        /* ====== أنماط الإشعارات ====== */
+        .notif-bell-btn {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            z-index: 999;
+            background: linear-gradient(135deg, #d4af37, #f5d76e);
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0a192f;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .notif-bell-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: #fff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #0a192f;
+        }
+
+        .notifications-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            background: rgba(10, 25, 47, 0.98);
+            backdrop-filter: blur(20px);
+            z-index: 10001;
+            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .notifications-panel.open {
+            right: 0;
+        }
+
+        .notifications-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .notifications-overlay.open {
+            display: block;
+        }
+
+        .panel-header {
+            padding: 20px 20px 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .panel-header .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .panel-header .header-title span {
+            font-size: 22px;
+        }
+
+        .panel-header .header-title h3 {
+            color: #fff;
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .panel-header .header-title .count-badge {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .panel-header .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .panel-header .header-actions .mark-read-btn {
+            background: rgba(255,255,255,0.05);
+            border: none;
+            color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .panel-header .header-actions .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .notifications-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .notif-item {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .notif-item.unread {
+            background: rgba(212, 175, 55, 0.05);
+            border-color: rgba(212, 175, 55, 0.15);
+        }
+
+        .notif-item .notif-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .notif-item .notif-row .notif-icon {
+            font-size: 20px;
+        }
+
+        .notif-item .notif-row .notif-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notif-item .notif-row .notif-content .notif-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .notif-item .notif-row .notif-content .notif-title-row .notif-title {
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .notif-item .notif-row .notif-content .notif-title-row .unread-dot {
+            background: #ef4444;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .notif-item .notif-row .notif-content .notif-message {
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 2px;
+        }
+
+        .notif-item .notif-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .notif-item .notif-footer .notif-time {
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .notif-item .notif-footer .notif-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .notif-item .notif-footer .notif-actions .goto-btn {
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            color: #d4af37;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .notif-item .notif-footer .notif-actions .goto-btn:hover {
+            background: rgba(212, 175, 55, 0.25);
+        }
+
+        .notif-item .notif-footer .notif-actions .read-tag {
+            color: #64748b;
+            font-size: 10px;
+        }
+
+        .notif-empty {
+            text-align: center;
+            color: #64748b;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
+
+        .notif-empty .empty-icon {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .panel-footer {
+            padding: 12px 20px 20px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            flex-shrink: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .panel-footer .clear-btn {
+            flex: 1;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .panel-footer .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div class="study-container" id="studyApp">
+    <!-- شريط البحث -->
+    <div class="search-bar" id="searchBar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="ابحث عن مجلد أو منشور..." oninput="handleSearch(this.value)">
+        <span class="search-clear" id="searchClear" onclick="clearSearch()">✕</span>
+    </div>
+
+    <!-- نتائج البحث -->
+    <div class="search-results" id="searchResults"></div>
+
+    <!-- زر فتح شاشة حالة النظام -->
+    <button onclick="openSystemDiagnosticsModal()" class="doc-btn" style="background: #0f172a; color: #38bdf8; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+        📊 حالة النظام والموارد
+    </button>
+
+    <!-- شريط المسار (Breadcrumb) -->
+    <div class="breadcrumb-bar" id="breadcrumbBar">
+        <span class="crumb" data-path="root" onclick="navigateTo('root')">🏠 المواد الدراسية</span>
+    </div>
+
+    <!-- رأس الصفحة -->
+    <div class="folder-header" id="folderHeader">
+        <h3>
+            <span class="folder-icon">📂</span>
+            <span id="currentFolderTitle">المواد الدراسية</span>
+        </h3>
+        <div class="action-btns-row">
+            <button class="btn-home-return" onclick="goHome()">🏠 الرئيسية</button>
+            <button class="btn-back" id="btnBack" onclick="goBack()" style="display:none;">↩️ رجوع</button>
+            <button class="btn-refresh" id="btnRefreshData" onclick="refreshData()">🔄 تحديث</button>
+            <button class="btn-add-folder" id="btnAddFolder" onclick="openCreateFolderModal()" style="display:none;">➕ مجلد</button>
+            <button class="btn-add-post" id="btnAddPost" onclick="openCreatePostModal()" style="display:none;">📝 إدراج</button>
+        </div>
+<button class="notif-bell-btn" onclick="toggleNotificationsPanel()">
+    🔔
+    <span class="notif-badge" id="notifBadge">0</span>
+</button>
+
+<!-- ====== نافذة الإشعارات المنبثقة ====== -->
+<div class="notifications-panel" id="notificationsPanel">
+    <div class="panel-header">
+        <div class="header-title">
+            <span>🔔</span>
+            <h3>الإشعارات</h3>
+            <span class="count-badge" id="notifCountDisplay">0</span>
+        </div>
+        <div class="header-actions">
+            <button class="mark-read-btn" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
+            <button class="close-btn" onclick="toggleNotificationsPanel()">✕</button>
+        </div>
+    </div>
+
+    <div class="notifications-list" id="notificationsList">
+        <div class="notif-empty">
+            <span class="empty-icon">📭</span>
+            لا توجد إشعارات جديدة
+        </div>
+    </div>
+
+    <div class="panel-footer">
+        <button class="clear-btn" onclick="clearAllNotifications()">🗑️ مسح جميع الإشعارات</button>
+    </div>
+</div>
+
+<!-- ====== خلفية داكنة ====== -->
+<div class="notifications-overlay" id="notificationsOverlay" onclick="toggleNotificationsPanel()"></div>
+    </div>
+
+    <!-- شبكة المجلدات -->
+    <div id="foldersContainer">
+        <div class="folders-grid" id="foldersGrid"></div>
+    </div>
+
+    <!-- قائمة المنشورات -->
+    <div id="postsContainer" style="display:none;">
+        <div class="posts-list" id="postsList"></div>
+    </div>
+
+    <!-- شريط التقدم -->
+    <div class="progress-bar-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+</div>
+
+<!-- ====== زر الإشعارات ====== -->
+
+
+<!-- ====== نافذة إنشاء مجلد ====== -->
+<div class="modal-overlay study-modal" id="createFolderModal">
+    <div class="modal-box study-modal-box">
+        <h3>📁 إنشاء مجلد جديد</h3>
+        <input type="text" id="newFolderName" placeholder="أدخل اسم المجلد...">
+        <input type="text" id="newFolderDescription" placeholder="وصف المجلد (اختياري)...">
+        <div class="modal-actions">
+            <button class="glass-btn primary-btn" onclick="confirmCreateFolder()">إنشاء</button>
+            <button class="glass-btn danger-btn" onclick="closeModal('createFolderModal')">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== نافذة تعديل مجلد ====== -->
+<div class="modal-overlay study-modal" id="editFolderModal">
+    <div class="modal-box study-modal-box">
+        <h3>✏️ تعديل اسم المجلد</h3>
+        <input type="text" id="editFolderName" placeholder="أدخل الاسم الجديد...">
+        <input type="text" id="editFolderDescription" placeholder="وصف المجلد (اختياري)...">
+        <div class="modal-actions">
+            <button class="glass-btn primary-btn" onclick="confirmEditFolder()">تعديل</button>
+            <button class="glass-btn danger-btn" onclick="closeModal('editFolderModal')">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== نافذة إنشاء منشور ====== -->
+<div class="modal-overlay study-modal" id="createPostModal">
+    <div class="modal-box study-modal-box">
+        <h3>📝 إدراج منشور جديد</h3>
+        <input type="text" id="newPostTitle" placeholder="عنوان المنشور...">
+        <textarea id="newPostText" placeholder="تفاصيل المنشور..."></textarea>
+        <div class="file-input-wrapper">
+            <label>📎 إرفاق ملف (صورة / PDF / مستند):</label>
+            <input type="file" id="newPostFile" accept="image/*,application/pdf,.doc,.docx,.txt">
+        </div>
+        <div class="modal-actions">
+            <button class="glass-btn primary-btn" onclick="confirmCreatePost()">نشر</button>
+            <button class="glass-btn danger-btn" onclick="closeModal('createPostModal')">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== نافذة تعديل منشور ====== -->
+<div class="modal-overlay study-modal" id="editPostModal">
+    <div class="modal-box study-modal-box">
+        <h3>✏️ تعديل المنشور</h3>
+        <input type="text" id="editPostTitle" placeholder="عنوان المنشور...">
+        <textarea id="editPostText" placeholder="تفاصيل المنشور..."></textarea>
+        <div class="file-input-wrapper">
+            <label>📎 تغيير الملف (اختياري):</label>
+            <input type="file" id="editPostFile" accept="image/*,application/pdf,.doc,.docx,.txt">
+        </div>
+        <div class="modal-actions">
+            <button class="glass-btn primary-btn" onclick="confirmEditPost()">تعديل</button>
+            <button class="glass-btn danger-btn" onclick="closeModal('editPostModal')">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== نافذة معاينة الملف ====== -->
+<div class="file-preview-overlay" id="filePreviewOverlay">
+    <div class="file-preview-box">
+        <div class="preview-header">
+            <h4 id="previewTitle">📄 معاينة الملف</h4>
+            <button class="preview-close-btn" onclick="closeFilePreview()">✕ إغلاق</button>
+        </div>
+        <div class="preview-content" id="previewContent">
+            <div class="preview-loading">⏳ جاري تحميل الملف...</div>
+        </div>
+        <div class="preview-actions">
+            <button class="preview-download-btn" id="previewDownloadBtn" onclick="downloadPreviewFile()">⬇️ تحميل الملف</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== نافذة تحميل الملفات (عجلة التحميل) ====== -->
+<div class="upload-progress-overlay" id="uploadProgressOverlay">
+    <div class="upload-progress-box">
+        <span class="upload-icon" id="uploadIcon">📤</span>
+        <div class="upload-title" id="uploadTitle">جاري رفع الملف...</div>
+        <div class="upload-status" id="uploadStatusText">⏳ جاري رفع الملف...</div>
+        <div class="upload-progress-track">
+            <div class="upload-progress-fill" id="uploadProgressBar" style="width: 0%;"></div>
+        </div>
+        <div class="upload-progress-text" id="uploadProgressText">0%</div>
+        <div class="upload-file-name" id="uploadFileName"></div>
+    </div>
+</div>
+
+<!-- ====== نافذة حالة النظام ====== -->
+<div id="diagnosticsModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; width: 90%; max-width: 480px; padding: 20px; color: #f8fafc; direction: rtl; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #38bdf8; font-size: 16px; display: flex; align-items: center; gap: 8px;">📊 تقرير حالة الموارد والسيرفرات</h3>
+            <button onclick="document.getElementById('diagnosticsModal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 5px 10px; line-height: 1;">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+            <div style="background: #1e293b; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 700;">🚀 سيرفر الرفع (Render)</div>
+                    <div style="font-size: 11px; color: #94a3b8;">استجابة السيرفر وزمن الاتصال</div>
+                </div>
+                <div style="text-align: left;">
+                    <span id="diag-render-status" style="font-weight: 700; color: #eab308;">⏳ فحص...</span>
+                    <div id="diag-render-ping" style="font-size: 10px; color: #94a3b8;">-</div>
+                </div>
+            </div>
+
+            <div style="background: #1e293b; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 700;">🔥 قاعدة البيانات (Firebase DB)</div>
+                    <div style="font-size: 11px; color: #94a3b8;">حالة الاتصال المباشر بالحساب</div>
+                </div>
+                <div>
+                    <span id="diag-firebase-status" style="font-weight: 700; color: #eab308;">⏳ فحص...</span>
+                </div>
+            </div>
+
+            <div style="background: #1e293b; padding: 12px; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="font-weight: 700;">💾 ذاكرة هاتف الطالب (IndexedDB)</span>
+                    <span id="diag-storage-percent" style="font-weight: 700; color: #38bdf8;">0%</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+                    <div id="diag-storage-bar" style="width: 0%; background: #38bdf8; height: 100%; transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span>المستغرق: <b id="diag-storage-used" style="color:#f8fafc;">0 MB</b></span>
+                    <span>المتاح بالنظام: <b id="diag-storage-quota" style="color:#f8fafc;">0 MB</b></span>
+                </div>
+
+                <button onclick="clearAppOfflineCache()" style="width: 100%; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; border-radius: 6px; padding: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    🗑️ تنظيف التخزين المؤقت وتوفير المساحة
+                </button>
+            </div>
+        </div>
+
+        <button onclick="runSystemDiagnostics()" style="margin-top: 15px; width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer;">
+            🔄 إعادة الفحص الآن
+        </button>
+    </div>
+</div>
+
+<!-- ====== قائمة الضغط المطول ====== -->
+<div class="long-press-menu" id="longPressMenu">
+    <button class="menu-item" onclick="editFolderFromMenu()">✏️ تعديل الاسم</button>
+    <button class="menu-item danger" onclick="deleteFolderFromMenu()">🗑️ حذف المجلد</button>
+</div>
+
+<!-- Firebase Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="study-materials.js?v=7"></script>
+
+<script src="firebase-messaging-sw.js?v=7"></script>
+
+
+<!-- ====== تسجيل Service Worker ====== -->
+<script>
+    // تسجيل Service Worker للتطبيق
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('✅ SW registered:', reg))
+            .catch(err => console.error('❌ SW registration failed:', err));
+        
+        // تسجيل Service Worker الخاص بـ Firebase Messaging
+        navigator.serviceWorker.register('./firebase-messaging-sw.js')
+            .then(reg => console.log('✅ FCM SW registered:', reg))
+            .catch(err => console.error('❌ FCM SW registration failed:', err));
+    }
+</script>
+</body>
+</html>

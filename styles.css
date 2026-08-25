@@ -1,0 +1,645 @@
+/* ==========================================================================
+   المتغيرات والألوان الفاخرة - Dark Glassmorphism Theme (محدث)
+   ========================================================================== */
+:root {
+    --bg-main: #060d18;
+    --bg-gradient: radial-gradient(circle at 30% 10%, #0f1e33, #040a12 80%);
+    
+    /* التأثيرات الزجاجية - أكثر شفافية وأناقة */
+    --glass-bg: rgba(12, 25, 45, 0.45);
+    --glass-bg-hover: rgba(22, 42, 72, 0.65);
+    --glass-border: rgba(212, 175, 55, 0.25);
+    --glass-border-glow: rgba(212, 175, 55, 0.6);
+    
+    /* التدرج الذهبي الفاخر - أعمق وأكثر دفئاً */
+    --gold-primary: #d4af37;
+    --gold-secondary: #f0d080;
+    --gold-grad: linear-gradient(135deg, #b8860b 0%, #d4af37 40%, #f5d78e 70%, #d4af37 100%);
+    --gold-glow: 0 0 25px rgba(212, 175, 55, 0.35);
+    --gold-glow-soft: 0 0 50px rgba(212, 175, 55, 0.12);
+    
+    /* النصوص والحالات - محسّنة للوضوح */
+    --text-light: #f2f6fc;
+    --text-muted: #b8c4d0;
+    --text-dim: #7a8a9a;
+    --text-gold: #e8c86a;
+    
+    --danger-color: #ff6b7a;
+    --danger-bg: rgba(255, 107, 122, 0.12);
+    --success-color: #4ade80;
+    --success-bg: rgba(74, 222, 128, 0.12);
+    
+    /* الظلال والإضاءة */
+    --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 8px 32px rgba(212, 175, 55, 0.2);
+}
+
+/* ==========================================================================
+   الإعدادات العامة والتهيئة
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Tajawal', 'Segoe UI', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background: var(--bg-main);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-light);
+    direction: rtl;
+    padding: 16px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* محاذاة للأعلى */
+}
+
+/* شريط تمرير أنيق */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--gold-primary);
+    border-radius: 10px;
+}
+
+/* ==========================================================================
+   الحاويات الزجاجية (Glass Cards) - مطورة
+   ========================================================================== */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 22px 20px;
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.glass-card:hover {
+    border-color: var(--glass-border-glow);
+    box-shadow: var(--shadow-card), var(--gold-glow-soft);
+}
+
+/* ==========================================================================
+   الحاوية الرئيسية - المسافة الثابتة من أعلى الصفحة
+   ========================================================================== */
+.app-container {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 20px; /* ← المسافة الثابتة من أعلى الصفحة */
+}
+
+/* ==========================================================================
+   1. الترويسة العليا (Header) - ثابتة لا تتأثر
+   ========================================================================== */
+.header-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.15);
+    padding-bottom: 16px;
+    position: relative;
+    margin-bottom: 8px;
+    flex-shrink: 0; /* ← تمنع الترويسة من الانكماش أو التحرك */
+}
+
+.header-card::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: 0;
+    width: 70px;
+    height: 2px;
+    background: var(--gold-grad);
+    border-radius: 4px;
+}
+
+.header-main-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.app-logo-prominent {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2.5px solid var(--gold-primary);
+    box-shadow: var(--gold-glow);
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.app-logo-prominent:hover {
+    transform: scale(1.05) rotate(-3deg);
+}
+
+.user-details h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+}
+
+.user-role-badge {
+    font-size: 11px;
+    color: var(--text-gold);
+    background: rgba(212, 175, 55, 0.12);
+    padding: 3px 14px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    backdrop-filter: blur(4px);
+    font-weight: 600;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.net-badge {
+    font-size: 10px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    backdrop-filter: blur(6px);
+    letter-spacing: 0.3px;
+}
+
+.net-badge.online {
+    background: var(--success-bg);
+    color: var(--success-color);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.net-badge.offline {
+    background: var(--danger-bg);
+    color: var(--danger-color);
+    border: 1px solid rgba(255, 107, 122, 0.25);
+}
+
+.icon-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.icon-btn:hover {
+    background: var(--gold-grad);
+    color: #0a0f1a;
+    border-color: var(--gold-primary);
+    box-shadow: var(--gold-glow);
+    transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   2. حاوية الإعلانات (Hero Banner Card) - قابلة للتمدد
+   ========================================================================== */
+.banner-card {
+    position: relative;
+    overflow: hidden;
+    background: rgba(12, 25, 45, 0.55);
+    padding: 20px 22px;
+    /* بدون flex-shrink: 0 عشان تتمدد طبيعياً وتدفع المحتوى */
+}
+
+.banner-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--gold-grad);
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+}
+
+.banner-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.03), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.banner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-gold);
+    font-weight: 700;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+    padding-bottom: 8px;
+}
+
+.banner-display-area {
+    min-height: 80px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #e6edf3;
+    position: relative;
+    z-index: 1;
+}
+
+.banner-display-area h4 {
+    color: var(--gold-secondary);
+    font-size: 17px;
+    margin-bottom: 6px;
+    font-weight: 700;
+    text-shadow: 0 0 30px rgba(212, 175, 55, 0.1);
+}
+
+.empty-banner {
+    color: var(--text-dim);
+    text-align: center;
+    padding: 24px 0;
+    font-size: 13px;
+}
+
+.banner-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+}
+
+/* ==========================================================================
+   3. الأزرار والقوائم الرئيسية (Main Menu Grid) - أنيقة
+   ========================================================================== */
+.main-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.menu-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    text-align: right;
+    width: 100%;
+    background: var(--glass-bg);
+    border-radius: 20px;
+    padding: 16px 18px;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.menu-card:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--gold-primary);
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 12px 40px rgba(212, 175, 55, 0.12), var(--gold-glow-soft);
+}
+
+.menu-icon {
+    font-size: 28px;
+    background: rgba(212, 175, 55, 0.08);
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    transition: all 0.3s ease;
+}
+
+.menu-card:hover .menu-icon {
+    background: rgba(212, 175, 55, 0.18);
+    border-color: rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.08);
+}
+
+.menu-text h3 {
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 3px;
+    font-weight: 600;
+}
+
+.menu-text p {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+/* ==========================================================================
+   4. الأزرار المصممة (Custom Glass Buttons) - فاخرة
+   ========================================================================== */
+.glass-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 11px 20px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.3px;
+}
+
+.primary-btn {
+    background: var(--gold-grad);
+    color: #060d18;
+    box-shadow: 0 6px 25px rgba(212, 175, 55, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.primary-btn:hover {
+    box-shadow: 0 8px 35px rgba(212, 175, 55, 0.4);
+    transform: translateY(-2px) scale(1.01);
+}
+
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-light);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(4px);
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.05);
+}
+
+.danger-btn {
+    background: var(--danger-color);
+    color: #fff;
+    border: 1px solid rgba(255, 107, 122, 0.2);
+}
+
+.danger-btn:hover {
+    box-shadow: 0 6px 25px rgba(255, 107, 122, 0.3);
+    transform: translateY(-2px);
+}
+
+.mini-btn {
+    font-size: 11px;
+    padding: 8px 14px;
+    border-radius: 10px;
+}
+
+/* ==========================================================================
+   5. شاشة الدخول والنوافذ المنبثقة (Modals & Login) - أنيقة
+   ========================================================================== */
+.login-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(4, 10, 18, 0.92);
+    backdrop-filter: blur(35px) saturate(1.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    padding: 35px 30px;
+    background: rgba(12, 25, 45, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 28px;
+    backdrop-filter: blur(30px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+.login-logo {
+    max-width: 90px;
+    height: auto;
+    display: block;
+    margin: 0 auto 18px auto;
+    border-radius: 50%;
+    border: 2.5px solid var(--gold-primary);
+    box-shadow: var(--gold-glow);
+}
+
+.login-card h2 {
+    font-size: 20px;
+    color: var(--gold-secondary);
+    margin-bottom: 24px;
+    font-weight: 700;
+    text-shadow: 0 0 30px rgba(212, 175, 55, 0.1);
+}
+
+.input-group {
+    text-align: right;
+    margin-bottom: 16px;
+}
+
+.input-group label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 13px 16px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--text-dim);
+}
+
+input:focus, textarea:focus {
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.08);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(4, 10, 18, 0.88);
+    backdrop-filter: blur(25px) saturate(1.2);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-box {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 28px 26px;
+    background: rgba(12, 25, 45, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.12);
+    border-radius: 24px;
+    backdrop-filter: blur(30px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+
+.modal-box h3 {
+    color: var(--gold-secondary);
+    font-size: 17px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+    padding-bottom: 10px;
+    font-weight: 700;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.file-input-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 6px;
+}
+
+/* ==========================================================================
+   6. تحسينات إضافية - لمسات فاخرة
+   ========================================================================== */
+
+/* خطوط ذهبية خافتة للعناصر المهمة */
+.gold-accent {
+    color: var(--gold-secondary);
+    font-weight: 600;
+}
+
+/* توهج خلفي للبطاقات عند التمرير */
+.glow-on-hover {
+    transition: all 0.4s ease;
+}
+.glow-on-hover:hover {
+    box-shadow: 0 0 50px rgba(212, 175, 55, 0.06), var(--shadow-card);
+}
+
+/* شريط تقسيم ذهبي رفيع */
+.divider-gold {
+    height: 1px;
+    background: linear-gradient(to left, transparent, rgba(212, 175, 55, 0.2), transparent);
+    margin: 10px 0;
+}
+
+/* نص ذهبي مع توهج خفيف */
+.text-glow-gold {
+    color: var(--gold-secondary);
+    text-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+}
+
+/* ==========================================================================
+   7. الشاشات الصغيرة - responsive
+   ========================================================================== */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+        align-items: flex-start;
+    }
+    .glass-card {
+        padding: 16px 14px;
+        border-radius: 20px;
+    }
+    .app-container {
+        padding-top: 12px; /* مسافة أقل في الشاشات الصغيرة */
+        gap: 14px;
+    }
+    .main-menu-grid {
+        grid-template-columns: 1fr;
+    }
+    .header-card {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .banner-controls {
+        flex-direction: column;
+    }
+    .banner-controls .glass-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .modal-box {
+        padding: 20px 16px;
+    }
+    .login-card {
+        padding: 25px 20px;
+    }
+}
+/* تصغير وتعديل أبعاد نافذة بيانات الأعضاء */
+.large-modal {
+    max-width: 400px !important; /* تقليل العرض (يمكنك تغييره إلى 380px إذا أردته أصغر) */
+    max-height: 80vh;            /* أقصى ارتفاع للنافذة هو 80% من طول الشاشة */
+}
+
+/* إضافة شريط تمرير داخلي لقائمة الأعضاء لكي لا تتمدد النافذة خارج الشاشة */
+.users-list-container {
+    max-height: 50vh;            /* ارتفاع قائمة الأعضاء نفسها */
+    overflow-y: auto;            /* إظهار سكرول عند كثرة البيانات */
+    padding-left: 5px;
+}
+
+/* تخصيص شكل شريط التمرير (Scrollbar) ليكون أنيقاً وزجاجياً */
+.users-list-container::-webkit-scrollbar {
+    width: 5px;
+}
+.users-list-container::-webkit-scrollbar-thumb {
+    background: var(--gold-primary);
+    border-radius: 10px;
+}
