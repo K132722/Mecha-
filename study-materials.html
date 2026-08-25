@@ -10,17 +10,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         /* ====== أنماط خاصة بصفحة المواد الدراسية ====== */
+        :root {
+            --gold-primary: #d4af37;
+            --gold-secondary: #f5d76e;
+            --gold-grad: linear-gradient(135deg, #d4af37, #f5d76e);
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --text-gold: #d4af37;
+            --success-color: #4ade80;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0a192f;
+            color: #ffffff;
+            font-family: 'Tajawal', sans-serif;
+            min-height: 100vh;
+            padding: 16px;
+            direction: rtl;
+        }
+
         .study-container {
             width: 100%;
             max-width: 640px;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
             gap: 16px;
             padding-top: 12px;
-            padding-bottom: 30px;
+            padding-bottom: 80px;
         }
 
-        /* شريط المسار (Breadcrumb) */
+        /* ====== شريط المسار (Breadcrumb) ====== */
         .breadcrumb-bar {
             background: rgba(12, 25, 45, 0.5);
             backdrop-filter: blur(16px);
@@ -179,7 +205,7 @@
             font-size: 13px;
         }
 
-        /* رأس المجلد */
+        /* ====== رأس المجلد ====== */
         .folder-header {
             display: flex;
             justify-content: space-between;
@@ -317,11 +343,12 @@
             transform: none;
         }
 
-        /* شبكة المجلدات */
-        .folders-grid {
+        /* ====== شبكة المجلدات والمنشورات ====== */
+        #foldersGrid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            padding: 10px 0;
         }
 
         .folder-card {
@@ -338,6 +365,11 @@
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .folder-card:hover {
@@ -355,7 +387,14 @@
 
         .folder-card .folder-name {
             color: #fff;
-            font-size: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .folder-card .folder-name1 {
+            color: #fff;
+            font-size: 16px;
             font-weight: 600;
             word-break: break-word;
         }
@@ -372,6 +411,7 @@
             left: 8px;
             display: none;
             gap: 6px;
+            z-index: 10;
         }
 
         .folder-card:hover .folder-actions-overlay {
@@ -403,184 +443,188 @@
             color: #fff;
         }
 
-        /* ====== قائمة المنشورات داخل المجلد ====== */
-        .posts-list {
+        /* ====== بطاقة المنشور المربعة ====== */
+        .post-square-card {
+            position: relative;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
-        .post-card {
-            background: rgba(12, 25, 45, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            border-radius: 14px;
-            padding: 16px 18px;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .post-card:hover {
-            border-color: rgba(212, 175, 55, 0.1);
-        }
-
-        .post-card .post-title {
-            color: #fff;
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            word-break: break-all;
-            overflow-wrap: anywhere;
+            align-items: center;
+            justify-content: flex-start;
             text-align: center;
-            direction: ltr;
-            line-height: 1.4;
+            padding: 12px 8px;
+            min-height: 180px;
+            gap: 4px;
         }
 
-        .post-card .post-text {
-            color: var(--text-muted);
-            font-size: 13px;
-            line-height: 1.7;
-            margin-bottom: 6px;
-        }
-
-        .post-card .post-meta {
+        .post-card-admin-actions {
+            position: absolute;
+            top: 6px;
+            left: 6px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--text-dim);
-            flex-wrap: wrap;
-            gap: 6px;
+            gap: 4px;
+            z-index: 10;
         }
 
-        .post-card .post-meta .post-user {
-            color: var(--text-gold);
-        }
-
-        .post-card .post-file .doc-btn {
-            padding: 6px 16px;
-            border-radius: 8px;
-            font-size: 12px;
+        .post-card-admin-actions button {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 10px;
             cursor: pointer;
-            font-weight: 500;
+            color: #fff;
             transition: all 0.3s ease;
-            border: none;
         }
 
-        .post-card .post-file .doc-btn-view {
-            background: rgba(212, 175, 55, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.12);
-            color: var(--text-gold);
+        .post-card-admin-actions button:hover {
+            background: rgba(212, 175, 55, 0.3);
         }
 
-        .post-card .post-file .doc-btn-view:hover {
-            background: rgba(212, 175, 55, 0.18);
-            transform: translateY(-1px);
+        .post-details-text {
+            color: #cbd5e1 !important;
+            font-size: 11px !important;
+            line-height: 1.4 !important;
+            text-align: center !important;
+            margin: 4px 0 6px 0 !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }
 
-        .post-card .post-file .doc-btn-download {
-            background: rgba(74, 222, 128, 0.1);
-            border: 1px solid rgba(74, 222, 128, 0.15);
-            color: var(--success-color);
-        }
-
-        .post-card .post-file .doc-btn-download:hover {
-            background: rgba(74, 222, 128, 0.2);
-            transform: translateY(-1px);
-        }
-
-        .post-card .post-file .offline-tag {
-            background: rgba(74, 222, 128, 0.12);
-            border: 1px solid rgba(74, 222, 128, 0.15);
-            color: var(--success-color);
-            padding: 6px 16px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            opacity: 0.8;
-        }
-
-        .post-card .post-file {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .post-card .doc-box {
+        /* ====== اسم الملف ====== */
+        .file-name-container {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 4px 0 !important;
+            gap: 2px !important;
             width: 100%;
+        }
+
+        .file-name-line {
+            color: #ffffff !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            line-height: 1.35 !important;
+            text-align: center !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            direction: ltr !important;
+        }
+
+        .file-ext-badge {
+            color: #94a3b8 !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            direction: ltr !important;
+            unicode-bidi: isolate !important;
+            margin-top: 1px !important;
+        }
+
+        /* ====== معلومات المنشور ====== */
+        .post-meta-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 10px;
+            color: var(--text-dim, #94a3b8);
+            margin: 4px 0;
+            width: 100%;
+        }
+
+        /* ====== أزرار المعاينة والحفظ ====== */
+        .post-square-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .doc-btn {
+            border: none;
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .doc-btn-view {
+            background: rgba(255, 255, 255, 0.9);
+            color: #0f172a;
+        }
+        .doc-btn-view:hover {
+            background: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .doc-btn-download {
+            background: #2563eb;
+            color: #ffffff;
+        }
+        .doc-btn-download:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        /* ====== شريط التقدم للتحميل ====== */
+        .download-progress-box {
+            width: 100%;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .download-progress-box .download-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #2563eb;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        #offlineCheck {
+            color: #10b981;
+            font-size: 10px;
+            font-weight: 700;
             margin-top: 4px;
         }
 
-        .post-card .download-progress-box {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-            display: none;
+        /* ====== حالة فارغة ====== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-dim);
+            grid-column: 1 / -1;
         }
 
-        .post-card .download-progress-box .download-progress-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--gold-grad);
-            border-radius: 4px;
-            transition: width 0.4s ease;
+        .empty-state .empty-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+            opacity: 0.4;
         }
 
-        /* ====== أزرار إدارة المنشورات للمشرف ====== */
-        .post-admin-actions {
-            display: none;
-            gap: 8px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            flex-wrap: wrap;
+        .empty-state p {
+            font-size: 14px;
         }
 
-        .post-admin-actions.visible {
-            display: flex;
-        }
-
-        .post-admin-actions .admin-btn {
-            padding: 4px 14px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-        }
-
-        .post-admin-actions .admin-btn-edit {
-            background: rgba(52, 152, 219, 0.15);
-            color: #5dade2;
-            border: 1px solid rgba(52, 152, 219, 0.2);
-        }
-
-        .post-admin-actions .admin-btn-edit:hover {
-            background: rgba(52, 152, 219, 0.25);
-        }
-
-        .post-admin-actions .admin-btn-delete {
-            background: rgba(255, 71, 87, 0.15);
-            color: #ff4757;
-            border: 1px solid rgba(255, 71, 87, 0.2);
-        }
-
-        .post-admin-actions .admin-btn-delete:hover {
-            background: rgba(255, 71, 87, 0.25);
-        }
-
-        /* ====== نافذة إنشاء مجلد ====== */
+        /* ====== النوافذ المنبثقة (Modals) ====== */
         .modal-overlay.study-modal {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -682,7 +726,6 @@
             background: rgba(255, 71, 87, 0.25);
         }
 
-        /* ====== نافذة تعديل منشور ====== */
         .file-input-wrapper {
             display: flex;
             flex-direction: column;
@@ -702,9 +745,10 @@
             border-radius: 10px;
             color: var(--text-muted);
             font-size: 12px;
+            font-family: 'Tajawal', sans-serif;
         }
 
-        /* ====== شريط التقدم ====== */
+        /* ====== شريط التقدم العام ====== */
         .progress-bar-container {
             display: none;
             width: 100%;
@@ -727,7 +771,7 @@
             transition: width 0.4s ease;
         }
 
-        /* ====== نافذة تحميل الملفات (عجلة التحميل) ====== */
+        /* ====== نافذة تحميل الملفات ====== */
         .upload-progress-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -803,24 +847,6 @@
             font-size: 12px;
             margin-top: 8px;
             word-break: break-word;
-        }
-
-        /* ====== حالة فارغة ====== */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-dim);
-        }
-
-        .empty-state .empty-icon {
-            font-size: 48px;
-            display: block;
-            margin-bottom: 12px;
-            opacity: 0.4;
-        }
-
-        .empty-state p {
-            font-size: 14px;
         }
 
         /* ====== نافذة معاينة الملف ====== */
@@ -963,6 +989,7 @@
             background: none;
             width: 100%;
             text-align: right;
+            font-family: 'Tajawal', sans-serif;
         }
 
         .long-press-menu .menu-item:hover {
@@ -977,227 +1004,7 @@
             background: rgba(255, 71, 87, 0.1);
         }
 
-        /* ====== استجابة ====== */
-        @media (max-width: 480px) {
-            .folders-grid {
-                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-                gap: 10px;
-            }
-            .folder-card {
-                padding: 14px 10px;
-            }
-            .folder-card .folder-icon-big {
-                font-size: 26px;
-            }
-            .folder-card .folder-name1 {
-                color: #fff;
-                font-size: 16px;
-                font-weight: 600;
-                word-break: break-word;
-            }
-            .breadcrumb-bar {
-                font-size: 11px;
-                padding: 10px 14px;
-                gap: 4px 6px;
-            }
-            .folder-header h3 {
-                font-size: 15px;
-            }
-            .btn-add-folder, .btn-add-post {
-                font-size: 11px;
-                padding: 6px 12px;
-            }
-            .file-preview-box {
-                padding: 14px;
-            }
-            .file-preview-box .preview-content {
-                min-height: 200px;
-            }
-            .search-bar input {
-                font-size: 12px;
-            }
-            .upload-progress-box {
-                padding: 20px 16px;
-            }
-            .upload-progress-box .upload-icon {
-                font-size: 36px;
-            }
-        }
-
-        /* شبكة عرض البطاقات المربعة (مجلدات ومنشورات) */
-        #foldersGrid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-            padding: 10px 0;
-        }
-
-        /* تنسيق اسم الملف داخل البطاقة */
-        .post-card .post-file,
-        .post-card .file-name,
-        .post-card .post-text {
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            word-break: break-all !important;
-            overflow-wrap: anywhere !important;
-            text-align: center !important;
-            direction: ltr !important;
-            line-height: 1.3 !important;
-            max-height: 2.6em !important;
-        }
-
-        /* تنسيق بطاقة المنشور المربعة */
-        .post-square-card {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            text-align: center;
-            padding: 12px 8px;
-            min-height: 150px;
-        }
-
-        /* زر أفعال الآدمين لبطاقات المنشورات المربعة */
-        .post-card-admin-actions {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            display: flex;
-            gap: 4px;
-        }
-
-        .post-card-admin-actions button {
-            background: rgba(15, 23, 42, 0.6);
-            border: none;
-            border-radius: 6px;
-            padding: 3px 6px;
-            font-size: 10px;
-            cursor: pointer;
-        }
-
-        /* تفاصيل البيانات المضافة (الوقت والمستخدم والحجم) */
-        .post-meta-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 10px;
-            color: var(--text-dim, #94a3b8);
-            margin: 6px 0;
-            width: 100%;
-        }
-
-        .post-file-size {
-            color: #38bdf8;
-            font-weight: 600;
-        }
-
-        /* أزرار المعاينة والحفظ بألوان محسنة ومتناسقة */
-        .post-square-actions {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-            width: 100%;
-            margin-top: auto;
-        }
-
-        .doc-btn {
-            border: none;
-            border-radius: 20px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* زر معاينة - رمادي زجاجي أنيق */
-        .doc-btn-view {
-            background: rgba(255, 255, 255, 0.9);
-            color: #0f172a;
-        }
-        .doc-btn-view:hover {
-            background: #ffffff;
-            transform: translateY(-1px);
-        }
-
-        /* زر حفظ - أزرق احترافي مريح */
-        .doc-btn-download {
-            background: #2563eb;
-            color: #ffffff;
-        }
-        .doc-btn-download:hover {
-            background: #1d4ed8;
-            transform: translateY(-1px);
-        }
-
-        /* شارة الأوفلاين */
-        .offline-badge {
-            color: #10b981;
-            font-size: 10px;
-            font-weight: 700;
-            margin-top: 4px;
-        }
-
-        /* الحاوية الكلية لاسم الملف */
-        .file-name-container {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 6px 0 !important;
-            gap: 2px !important;
-        }
-
-        /* السطر الأول والثاني لاسم الملف */
-        .file-name-line {
-            color: #ffffff !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            line-height: 1.35 !important;
-            text-align: center !important;
-            word-break: break-word !important;
-            overflow-wrap: break-word !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-        }
-
-        /* السطر الثالث المنفصل لنوع الملف */
-        .file-ext-badge {
-            color: #94a3b8 !important;
-            font-size: 11px !important;
-            font-weight: bold !important;
-            direction: ltr !important;
-            unicode-bidi: isolate !important;
-            margin-top: 1px !important;
-        }
-
-        /* تنسيق تفاصيل/وصف المنشور داخل البطاقة */
-        .post-details-text {
-            color: #cbd5e1 !important;
-            font-size: 6px !important;
-            line-height: 0.5 !important;
-            text-align: center !important;
-            margin: 4px 0 6px 0 !important;
-            word-break: break-word !important;
-            overflow-wrap: break-word !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-        }
-
-        /* ====== أنماط الإشعارات ====== */
+        /* ====== نظام الإشعارات ====== */
         .notif-bell-btn {
             position: fixed;
             bottom: 80px;
@@ -1323,6 +1130,7 @@
             font-size: 11px;
             cursor: pointer;
             font-weight: 600;
+            font-family: 'Tajawal', sans-serif;
         }
 
         .panel-header .header-actions .close-btn {
@@ -1433,6 +1241,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             white-space: nowrap;
+            font-family: 'Tajawal', sans-serif;
         }
 
         .notif-item .notif-footer .notif-actions .goto-btn:hover {
@@ -1475,37 +1284,153 @@
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
         }
 
         .panel-footer .clear-btn:hover {
             background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* ====== نافذة حالة النظام ====== */
+        #diagnosticsModal .modal-content {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 480px;
+            padding: 20px;
+            color: #f8fafc;
+            direction: rtl;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* ====== استجابة للشاشات الصغيرة ====== */
+        @media (max-width: 480px) {
+            .study-container {
+                padding: 8px;
+                gap: 12px;
+            }
+
+            #foldersGrid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+
+            .folder-card {
+                padding: 14px 10px;
+                min-height: 100px;
+            }
+
+            .folder-card .folder-icon-big {
+                font-size: 26px;
+            }
+
+            .folder-card .folder-name1 {
+                font-size: 14px;
+            }
+
+            .breadcrumb-bar {
+                font-size: 11px;
+                padding: 10px 14px;
+                gap: 4px 6px;
+            }
+
+            .folder-header h3 {
+                font-size: 15px;
+            }
+
+            .btn-add-folder, .btn-add-post {
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+
+            .file-preview-box {
+                padding: 14px;
+            }
+
+            .file-preview-box .preview-content {
+                min-height: 200px;
+            }
+
+            .search-bar input {
+                font-size: 12px;
+            }
+
+            .upload-progress-box {
+                padding: 20px 16px;
+            }
+
+            .upload-progress-box .upload-icon {
+                font-size: 36px;
+            }
+
+            .notif-bell-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                bottom: 70px;
+                left: 16px;
+            }
+
+            .notifications-panel {
+                max-width: 100%;
+            }
+
+            .modal-box.study-modal-box {
+                padding: 20px 16px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            #foldersGrid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 8px;
+            }
+
+            .folder-card {
+                padding: 10px 6px;
+                min-height: 80px;
+            }
+
+            .folder-card .folder-icon-big {
+                font-size: 22px;
+            }
+
+            .folder-card .folder-name1 {
+                font-size: 12px;
+            }
+
+            .action-btns-row .btn {
+                font-size: 10px;
+                padding: 4px 10px;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="study-container" id="studyApp">
-    <!-- شريط البحث -->
+    <!-- ====== شريط البحث ====== -->
     <div class="search-bar" id="searchBar">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" placeholder="ابحث عن مجلد أو منشور..." oninput="handleSearch(this.value)">
         <span class="search-clear" id="searchClear" onclick="clearSearch()">✕</span>
     </div>
 
-    <!-- نتائج البحث -->
+    <!-- ====== نتائج البحث ====== -->
     <div class="search-results" id="searchResults"></div>
 
-    <!-- زر فتح شاشة حالة النظام -->
-    <button onclick="openSystemDiagnosticsModal()" class="doc-btn" style="background: #0f172a; color: #38bdf8; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+    <!-- ====== زر فتح شاشة حالة النظام ====== -->
+    <button onclick="openSystemDiagnosticsModal()" class="doc-btn" style="background: #0f172a; color: #38bdf8; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: fit-content;">
         📊 حالة النظام والموارد
     </button>
 
-    <!-- شريط المسار (Breadcrumb) -->
+    <!-- ====== شريط المسار (Breadcrumb) ====== -->
     <div class="breadcrumb-bar" id="breadcrumbBar">
         <span class="crumb" data-path="root" onclick="navigateTo('root')">🏠 المواد الدراسية</span>
     </div>
 
-    <!-- رأس الصفحة -->
+    <!-- ====== رأس الصفحة ====== -->
     <div class="folder-header" id="folderHeader">
         <h3>
             <span class="folder-icon">📂</span>
@@ -1518,59 +1443,56 @@
             <button class="btn-add-folder" id="btnAddFolder" onclick="openCreateFolderModal()" style="display:none;">➕ مجلد</button>
             <button class="btn-add-post" id="btnAddPost" onclick="openCreatePostModal()" style="display:none;">📝 إدراج</button>
         </div>
-<button class="notif-bell-btn" onclick="toggleNotificationsPanel()">
-    🔔
-    <span class="notif-badge" id="notifBadge">0</span>
-</button>
+    </div>
 
-<!-- ====== نافذة الإشعارات المنبثقة ====== -->
-<div class="notifications-panel" id="notificationsPanel">
-    <div class="panel-header">
-        <div class="header-title">
-            <span>🔔</span>
-            <h3>الإشعارات</h3>
-            <span class="count-badge" id="notifCountDisplay">0</span>
+    <!-- ====== زر الإشعارات ====== -->
+    <button class="notif-bell-btn" onclick="toggleNotificationsPanel()" aria-label="الإشعارات">
+        🔔
+        <span class="notif-badge" id="notifBadge">0</span>
+    </button>
+
+    <!-- ====== نافذة الإشعارات المنبثقة ====== -->
+    <div class="notifications-overlay" id="notificationsOverlay" onclick="toggleNotificationsPanel()"></div>
+    <div class="notifications-panel" id="notificationsPanel">
+        <div class="panel-header">
+            <div class="header-title">
+                <span>🔔</span>
+                <h3>الإشعارات</h3>
+                <span class="count-badge" id="notifCountDisplay">0</span>
+            </div>
+            <div class="header-actions">
+                <button class="mark-read-btn" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
+                <button class="close-btn" onclick="toggleNotificationsPanel()">✕</button>
+            </div>
         </div>
-        <div class="header-actions">
-            <button class="mark-read-btn" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
-            <button class="close-btn" onclick="toggleNotificationsPanel()">✕</button>
+
+        <div class="notifications-list" id="notificationsList">
+            <div class="notif-empty">
+                <span class="empty-icon">📭</span>
+                لا توجد إشعارات جديدة
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <button class="clear-btn" onclick="clearAllNotifications()">🗑️ مسح جميع الإشعارات</button>
         </div>
     </div>
 
-    <div class="notifications-list" id="notificationsList">
-        <div class="notif-empty">
-            <span class="empty-icon">📭</span>
-            لا توجد إشعارات جديدة
-        </div>
-    </div>
-
-    <div class="panel-footer">
-        <button class="clear-btn" onclick="clearAllNotifications()">🗑️ مسح جميع الإشعارات</button>
-    </div>
-</div>
-
-<!-- ====== خلفية داكنة ====== -->
-<div class="notifications-overlay" id="notificationsOverlay" onclick="toggleNotificationsPanel()"></div>
-    </div>
-
-    <!-- شبكة المجلدات -->
+    <!-- ====== شبكة المجلدات والمنشورات ====== -->
     <div id="foldersContainer">
         <div class="folders-grid" id="foldersGrid"></div>
     </div>
 
-    <!-- قائمة المنشورات -->
+    <!-- ====== قائمة المنشورات (قديمة - محفوظة للتوافق) ====== -->
     <div id="postsContainer" style="display:none;">
         <div class="posts-list" id="postsList"></div>
     </div>
 
-    <!-- شريط التقدم -->
+    <!-- ====== شريط التقدم ====== -->
     <div class="progress-bar-container" id="progressContainer">
         <div class="progress-bar" id="progressBar"></div>
     </div>
 </div>
-
-<!-- ====== زر الإشعارات ====== -->
-
 
 <!-- ====== نافذة إنشاء مجلد ====== -->
 <div class="modal-overlay study-modal" id="createFolderModal">
@@ -1664,7 +1586,7 @@
 
 <!-- ====== نافذة حالة النظام ====== -->
 <div id="diagnosticsModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center;">
-    <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; width: 90%; max-width: 480px; padding: 20px; color: #f8fafc; direction: rtl; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+    <div class="modal-content">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 15px;">
             <h3 style="margin: 0; color: #38bdf8; font-size: 16px; display: flex; align-items: center; gap: 8px;">📊 تقرير حالة الموارد والسيرفرات</h3>
             <button onclick="document.getElementById('diagnosticsModal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 5px 10px; line-height: 1;">✕</button>
@@ -1705,13 +1627,13 @@
                     <span>المتاح بالنظام: <b id="diag-storage-quota" style="color:#f8fafc;">0 MB</b></span>
                 </div>
 
-                <button onclick="clearAppOfflineCache()" style="width: 100%; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; border-radius: 6px; padding: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <button onclick="clearAppOfflineCache()" style="width: 100%; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; border-radius: 6px; padding: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: 'Tajawal', sans-serif;">
                     🗑️ تنظيف التخزين المؤقت وتوفير المساحة
                 </button>
             </div>
         </div>
 
-        <button onclick="runSystemDiagnostics()" style="margin-top: 15px; width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer;">
+        <button onclick="runSystemDiagnostics()" style="margin-top: 15px; width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer; font-family: 'Tajawal', sans-serif;">
             🔄 إعادة الفحص الآن
         </button>
     </div>
@@ -1723,30 +1645,59 @@
     <button class="menu-item danger" onclick="deleteFolderFromMenu()">🗑️ حذف المجلد</button>
 </div>
 
-<!-- Firebase Compat -->
+<!-- ====== Firebase SDK ====== -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="study-materials.js?v=7"></script>
-
-<script src="firebase-messaging-sw.js?v=7"></script>
-
+<!-- ====== ملف التطبيق الرئيسي ====== -->
+<script src="study-materials.js?v=8"></script>
 
 <!-- ====== تسجيل Service Worker ====== -->
 <script>
-    // تسجيل Service Worker للتطبيق
-    if ('serviceWorker' in navigator) {
+    (function registerServiceWorkers() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('⚠️ Service Workers غير مدعومة في هذا المتصفح');
+            return;
+        }
+
+        // تسجيل Service Worker الأساسي
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('✅ SW registered:', reg))
-            .catch(err => console.error('❌ SW registration failed:', err));
-        
+            .then(reg => {
+                console.log('✅ Service Worker registered successfully:', reg);
+                // التحقق من التحديثات
+                reg.update();
+            })
+            .catch(err => {
+                console.error('❌ Service Worker registration failed:', err);
+            });
+
         // تسجيل Service Worker الخاص بـ Firebase Messaging
         navigator.serviceWorker.register('./firebase-messaging-sw.js')
-            .then(reg => console.log('✅ FCM SW registered:', reg))
-            .catch(err => console.error('❌ FCM SW registration failed:', err));
-    }
+            .then(reg => {
+                console.log('✅ FCM Service Worker registered successfully:', reg);
+                reg.update();
+            })
+            .catch(err => {
+                console.error('❌ FCM Service Worker registration failed:', err);
+            });
+
+        // مراقبة حالة Service Worker
+        navigator.serviceWorker.ready.then(registration => {
+            console.log('📡 Service Worker ready:', registration);
+        });
+
+        // مراقبة التحديثات
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('🔄 Service Worker updated, reloading...');
+            // تحديث الصفحة بعد تثبيت الـ SW الجديد
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        });
+    })();
 </script>
+
 </body>
 </html>
