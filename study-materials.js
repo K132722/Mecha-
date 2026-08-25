@@ -1,4 +1,4 @@
-// 
+// ========================================================================
 // 1. تهيئة Firebase للمواد الدراسية (للتخزين المنظم والبيانات فقط)
 // ========================================================================
 const STUDY_FIREBASE_CONFIG = {
@@ -146,6 +146,7 @@ let currentStudyPath = [];
 let globalPostsData = { posts: [], folders: [] };
 let editingPostIndex = null;
 let editingFolderName = null;
+let editingFolderPath = '';
 let searchTimeout = null;
 
 function getStudyUser() {
@@ -282,7 +283,6 @@ function openStudyPreview(pathKey, index) {
         post = globalPostsData.posts[index];
     }
 
-    // استخدام post.id بشكل موحد
     const postId = post && post.id ? post.id : `post_${index}`;
     const mediaKey = `${pathKey}_${postId}`;
 
@@ -327,12 +327,9 @@ function openStudyPreview(pathKey, index) {
     });
 }
 
-
-
 function showFileInPreview(blobUrl, mimeType, post) {
     if (blobUrl) {
         window.location.href = blobUrl;
-
     }
 }
 
@@ -340,13 +337,6 @@ function showFileInPreview(blobUrl, mimeType, post) {
 // 5. تحميل الملف وحفظه للعمل أوفلاين مع نسبة تحميل حقيقية
 // ========================================================================
 
-// 1. دالة تحديث شريط التقدم والنسبة بالوقت الفعلي
-
-// ========================================================================
-// 5. تحميل الملف وحفظه للعمل أوفلاين مع نسبة تحميل حقيقية
-// ========================================================================
-
-// دالة تحديث واجهة التنزيل وشريط التقدم
 function updateDownloadUI(mediaKey, percent, loadedSizeStr, totalSizeStr) {
     const pbox = document.getElementById(`pbox-${mediaKey}`);
     const pbar = document.getElementById(`pbar-${mediaKey}`);
@@ -358,7 +348,6 @@ function updateDownloadUI(mediaKey, percent, loadedSizeStr, totalSizeStr) {
     if (ptext) ptext.textContent = `${Math.min(100, Math.round(percent))}%`;
     if (psize) psize.textContent = totalSizeStr ? `${loadedSizeStr} / ${totalSizeStr}` : loadedSizeStr;
 
-    // عند اكتمال التنزيل 100%
     if (percent >= 100) {
         setTimeout(() => {
             if (pbox) pbox.style.display = 'none';
@@ -370,7 +359,14 @@ function updateDownloadUI(mediaKey, percent, loadedSizeStr, totalSizeStr) {
     }
 }
 
-// دالة حفظ الملف أوفلاين
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '';
+    const k = 1024;
+    const sizes = ['بايت', 'ك.ب', 'م.ب', 'ج.ب'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
 async function saveStudyFileOffline(pathKey, postIndex) {
     const folderData = globalPostsData || {};
     const posts = folderData.posts || [];
@@ -381,10 +377,8 @@ async function saveStudyFileOffline(pathKey, postIndex) {
         return;
     }
 
-    // استخدام post.id بشكل موحد
     const postId = post.id || `post_${postIndex}`;
     const mediaKey = `${pathKey}_${postId}`;
-    // ... باقي الكود كما هو
     let fileUrl = post.fileUrl || post.url || post.fileData;
 
     if (!fileUrl) {
@@ -392,7 +386,6 @@ async function saveStudyFileOffline(pathKey, postIndex) {
         return;
     }
 
-    // دعم روابط تلجرام مع Parameters
     if (post.telegramFileId && fileUrl) {
         try {
             const urlObj = new URL(fileUrl);
@@ -456,7 +449,6 @@ async function saveStudyFileOffline(pathKey, postIndex) {
         if (pbox) pbox.style.display = 'none';
     }
 }
-
 
 // ========================================================================
 // 6. إدارة المسار (Breadcrumb) والتنقل
@@ -635,7 +627,6 @@ async function loadCurrentFolder() {
 // ========================================================================
 // 9. عرض المحتوى
 // ========================================================================
-// دالة تقسم اسم الملف إلى اسم وامتداد
 function splitFileNameAndExt(fileName) {
     if (!fileName) return { name: '', ext: '' };
     const lastDot = fileName.lastIndexOf('.');
@@ -646,25 +637,24 @@ function splitFileNameAndExt(fileName) {
     };
 }
 
-// دالة تنسيق حجم الملف
-function formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '';
-    const k = 1024;
-    const sizes = ['بايت', 'ك.ب', 'م.ب', 'ج.ب'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
-// ========================================================================
-// 9. عرض المحتوى (بطاقات مربعة للمجلدات والمنشورات في شبكة واحدة)
-// ========================================================================
-// ========================================================================
-// 9. عرض المحتوى (بطاقات مربعة للمجلدات والمنشورات)
-// ========================================================================
-
-// ========================================================================
-// 9. عرض المحتوى (بطاقات مربعة للمجلدات والمنشورات)
-// ========================================================================
+function checkHasSubFolders(pathKey) {
+    const localKey = `study_cache_${pathKey}`;
+    try {
+        const cached = localStorage.getItem(localKey);
+        if (cached) {
+            const data = JSON.parse(cached);
+            return data.folders && data.folders.length > 0;
+        }
+    } catch (e) {}
+    return false;
+}
 
 function renderFolderContent(data) {
     const grid = document.getElementById('foldersGrid');
@@ -728,7 +718,6 @@ function renderFolderContent(data) {
             const originalIndex = posts.length - 1 - i;
             const hasFile = post.hasFile || post.fileData || post.fileUrl;
             
-            // استخدام post.id بشكل موحد
             const postId = post.id || `post_${originalIndex}`;
             const mediaKey = `${pathKey}_${postId}`;
 
@@ -770,12 +759,10 @@ function renderFolderContent(data) {
         ${postAdminActions}
         <img src="document.png" class="folder-icon-big" alt="منشور" style="width: 50px; height: 50px; transform: scale(2); object-fit: contain;">
         <div class="folder-name1">${escapeHtml(post.title || 'بدون عنوان')}</div>
- ${(post.text || post.description) ? `
+        ${(post.text || post.description) ? `
             <div class="post-details-text" style="color: #fbbf24 !important; font-size: 10px !important; line-height: 1.3; text-align: center; margin: 4px 0;">${escapeHtml(post.text || post.description)}</div>
-
         ` : ''}
-        
-              ${hasFile ? (() => {
+        ${hasFile ? (() => {
             const fullName = fileParsed.name || '';
             const ext = fileParsed.ext ? fileParsed.ext.trim() : '';
             
@@ -793,37 +780,33 @@ function renderFolderContent(data) {
             </div>`;
         })() : ''}
 
-
         <div class="post-meta-info" style="display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: #94a3b8; margin: 6px 0;">
             <div>👤 ${escapeHtml(post.user || 'أدمين')}</div>
             ${timeFormatted ? `<div>🕒 ${timeFormatted}</div>` : ''}
             ${fileSizeStr ? `<div style="color: #38bdf8; font-weight: 600;">💽 ${fileSizeStr}</div>` : ''}
         </div>
 
+        ${hasFile ? `
+            <div class="post-square-actions" id="actions-${mediaKey}" style="display: flex; gap: 6px; justify-content: center; width: 100%; margin-top: 6px;">
+                <button onclick="event.stopPropagation(); openStudyPreview('${pathKey}', ${originalIndex})" class="doc-btn doc-btn-view" style="background: #fff; color: #0f172a; border: none; border-radius: 20px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer;">👁️ معاينة</button>
+                <button onclick="event.stopPropagation(); saveStudyFileOffline('${pathKey}', ${originalIndex})" class="doc-btn doc-btn-download" id="btnDl-${mediaKey}" style="background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer;">💾 حفظ</button>
+            </div>
 
-
-                    ${hasFile ? `
-                    <div class="post-square-actions" id="actions-${mediaKey}" style="display: flex; gap: 6px; justify-content: center; width: 100%; margin-top: 6px;">
-                        <button onclick="event.stopPropagation(); openStudyPreview('${pathKey}', ${originalIndex})" class="doc-btn doc-btn-view" style="background: #fff; color: #0f172a; border: none; border-radius: 20px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer;"> معاينة</button>
-                        <button onclick="event.stopPropagation(); saveStudyFileOffline('${pathKey}', ${originalIndex})" class="doc-btn doc-btn-download" id="btnDl-${mediaKey}" style="background: #2563eb; color: #fff; border: none; border-radius: 20px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer;">💾 حفظ</button>
-                    </div>
-
-                    <!-- شريط التقدم -->
-                    <div class="download-progress-box" id="pbox-${mediaKey}" style="display:none; width:100%; margin-top:8px;">
-                        <div style="background:rgba(255,255,255,0.1); border-radius:4px; height:6px; overflow:hidden;">
-                            <div class="download-progress-bar" id="pbar-${mediaKey}" style="width:0%; background:#2563eb; height:100%; transition:width 0.2s;"></div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; margin-top:4px;">
-                            <span id="ptext-${mediaKey}">0%</span>
-                            <span id="psize-${mediaKey}">0 م.ب</span>
-                        </div>
-                    </div>
-
-                    <div id="offlineCheck-${mediaKey}" style="display:none; color:#10b981; font-size:10px; font-weight:700; margin-top:4px;">
-                        ✅ محلياً
-                    </div>
-                    ` : ''}
+            <div class="download-progress-box" id="pbox-${mediaKey}" style="display:none; width:100%; margin-top:8px;">
+                <div style="background:rgba(255,255,255,0.1); border-radius:4px; height:6px; overflow:hidden;">
+                    <div class="download-progress-bar" id="pbar-${mediaKey}" style="width:0%; background:#2563eb; height:100%; transition:width 0.2s;"></div>
                 </div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; margin-top:4px;">
+                    <span id="ptext-${mediaKey}">0%</span>
+                    <span id="psize-${mediaKey}">0 م.ب</span>
+                </div>
+            </div>
+
+            <div id="offlineCheck-${mediaKey}" style="display:none; color:#10b981; font-size:10px; font-weight:700; margin-top:4px;">
+                ✅ محلياً
+            </div>
+        ` : ''}
+    </div>
             `;
         }
     }
@@ -831,7 +814,6 @@ function renderFolderContent(data) {
     grid.innerHTML = htmlContent;
     if (postsContainer) postsContainer.style.display = 'none';
 
-    // إخفاء زر الحفظ فوراً للملفات المحفوظة سابقاً
     setTimeout(async () => {
         if (posts.length > 0) {
             const reversedPosts = [...posts].reverse();
@@ -839,7 +821,6 @@ function renderFolderContent(data) {
                 const post = reversedPosts[i];
                 const originalIndex = posts.length - 1 - i;
                 if (post.hasFile || post.fileData || post.fileUrl) {
-                    // استخدام post.id بشكل موحد
                     const postId = post.id || `post_${originalIndex}`;
                     const mediaKey = `${pathKey}_${postId}`;
                     const isSaved = await checkIsSaved(mediaKey);
@@ -853,28 +834,6 @@ function renderFolderContent(data) {
             }
         }
     }, 100);
-}
-
-
-
-
-function checkHasSubFolders(pathKey) {
-    const localKey = `study_cache_${pathKey}`;
-    try {
-        const cached = localStorage.getItem(localKey);
-        if (cached) {
-            const data = JSON.parse(cached);
-            return data.folders && data.folders.length > 0;
-        }
-    } catch (e) {}
-    return false;
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // ========================================================================
@@ -891,6 +850,13 @@ function openCreateFolderModal() {
     if (descInput) descInput.value = '';
     const modal = document.getElementById('createFolderModal');
     if (modal) modal.classList.add('active');
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
 }
 
 async function confirmCreateFolder() {
@@ -945,11 +911,22 @@ async function confirmCreateFolder() {
             title: '📁 مجلد جديد',
             message: `قام ${user ? user.name : 'المدير'} بإنشاء مجلد جديد "${folderName}"`,
             path: pathKey,
-            timestamp: new Date().toLocaleString('ar-YE'),
+            timestamp: Date.now(),
             read: false
         };
         await studyDb.ref('notifications').push(notification);
         showNotificationInHome(notification);
+
+        // إرسال إشعار FCM
+        await sendFCMNotificationToAll(
+            '📁 مجلد جديد',
+            `${user?.name || 'المدير'} أضاف مجلد جديد: "${folderName}"`,
+            {
+                path: pathKey,
+                type: 'folder_created',
+                folderName: folderName
+            }
+        );
 
         alert('✅ تم إنشاء المجلد بنجاح!');
 
@@ -962,20 +939,10 @@ async function confirmCreateFolder() {
 // ========================================================================
 // 11. تعديل وحذف المجلد
 // ========================================================================
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-let editingFolderPath = ''; // متغير عام لتخزين المسار الدقيق عند الفتح
-
 function openEditFolderModal(folderName) {
     if (!isStudyAdmin()) return;
     
     editingFolderName = folderName;
-    // اعتماد نفس طريقة توليد المسار عبر getPathKey
     editingFolderPath = getPathKey(currentStudyPath);
 
     const nameInput = document.getElementById('editFolderName');
@@ -1011,7 +978,6 @@ function openEditFolderModal(folderName) {
     if (modal) modal.classList.add('active');
 }
 
-
 async function confirmEditFolder() {
     const nameInput = document.getElementById('editFolderName');
     const descInput = document.getElementById('editFolderDescription');
@@ -1028,7 +994,6 @@ async function confirmEditFolder() {
         return;
     }
 
-    // استخدام نفس المسار المخزن من getPathKey عند الفتح
     const basePath = editingFolderPath || getPathKey(currentStudyPath);
     const localKey = `study_cache_${basePath}`;
 
@@ -1040,7 +1005,6 @@ async function confirmEditFolder() {
 
         const targetOldName = (typeof editingFolderName === 'object' ? editingFolderName.name : editingFolderName) || '';
 
-        // مطابقة الاسم القديم داخل المصفوفة
         const index = data.folders.findIndex(f => {
             if (!f) return false;
             const currentName = typeof f === 'object' ? f.name : f;
@@ -1062,7 +1026,6 @@ async function confirmEditFolder() {
             return;
         }
 
-        // نقل المحتويات والمجلدات الفرعية إلى المسار الجديد
         if (newName !== oldName) {
             const oldFullPath = `${basePath}/${oldName}`;
             const newFullPath = `${basePath}/${newName}`;
@@ -1078,7 +1041,6 @@ async function confirmEditFolder() {
                 await oldRef.remove();
             }
 
-            // تحديث التخزين المحلي
             const oldLocalKey = `study_cache_${oldFullPath}`;
             const newLocalKey = `study_cache_${newFullPath}`;
             const oldCache = localStorage.getItem(oldLocalKey);
@@ -1088,7 +1050,6 @@ async function confirmEditFolder() {
             }
         }
 
-        // تحديث العنصر في قائمة المجلد الأب
         if (typeof oldFolder === 'object') {
             oldFolder.name = newName;
             oldFolder.description = newDescription;
@@ -1096,7 +1057,6 @@ async function confirmEditFolder() {
             data.folders[index] = { name: newName, description: newDescription };
         }
 
-        // تحديث قائمة المجلدات فقط بدون مسح العقد الفرعية
         await studyDb.ref(`study_materials/${basePath}`).update({
             folders: data.folders
         });
@@ -1104,8 +1064,25 @@ async function confirmEditFolder() {
         localStorage.setItem(localKey, JSON.stringify(data));
 
         closeModal('editFolderModal');
-        if (typeof updateBreadcrumb === 'function') updateBreadcrumb();
-        if (typeof loadCurrentFolder === 'function') await loadCurrentFolder();
+        updateBreadcrumb();
+        await loadCurrentFolder();
+
+        const user = getStudyUser();
+        const notification = {
+            type: 'folder_renamed',
+            title: '✏️ تغيير اسم مجلد',
+            message: `قام ${user ? user.name : 'المدير'} بتغيير اسم مجلد من "${oldName}" إلى "${newName}"`,
+            path: basePath,
+            oldName: oldName,
+            newName: newName,
+            oldSubPath: `${basePath}/${oldName}`,
+            newSubPath: `${basePath}/${newName}`,
+            timestamp: Date.now(),
+            read: false,
+            forceUpdate: true
+        };
+        await studyDb.ref('notifications').push(notification);
+        showNotificationInHome(notification);
 
         alert(`✅ تم تعديل المجلد إلى "${newName}" بنجاح!`);
 
@@ -1114,10 +1091,6 @@ async function confirmEditFolder() {
         alert(`❌ حدث خطأ أثناء تعديل المجلد: ${err.message}`);
     }
 }
-// دالة تحديث واجهة التحميل والإخفاء
-
-
-
 
 async function confirmDeleteFolder(folderName) {
     if (!isStudyAdmin()) return;
@@ -1160,7 +1133,7 @@ async function confirmDeleteFolder(folderName) {
                 title: '🗑️ حذف مجلد',
                 message: `قام ${user ? user.name : 'المدير'} بحذف المجلد "${folderName}"`,
                 path: pathKey,
-                timestamp: new Date().toLocaleString('ar-YE'),
+                timestamp: Date.now(),
                 read: false
             };
             await studyDb.ref('notifications').push(notification);
@@ -1287,7 +1260,7 @@ async function confirmCreatePost() {
 
         if (!data.posts) data.posts = [];
 
-                const user = getStudyUser();
+        const user = getStudyUser();
         const file = hasFiles ? fileInput.files[0] : null;
 
         const newPost = {
@@ -1299,19 +1272,13 @@ async function confirmCreatePost() {
             fileName: fileName,
             fileType: fileType,
             hasFile: !!fileUrl,
-            
-            // 1. إرسال حجم الملف الفعلي بالبايت
-            fileSize: file ? file.size : 0, 
-
+            fileSize: file ? file.size : 0,
             telegramFileId: telegramFileId,
             telegramFileUniqueId: telegramFileUniqueId,
             user: user ? user.name : 'مستخدم',
-            
-            // 2. إرسال الوقت بتنسيق مللي ثانية لضمان قراءته في Date() بدون أخطاء
-            timestamp: Date.now(), 
+            timestamp: Date.now(),
             createdAt: new Date().toISOString()
         };
-
 
         data.posts.push(newPost);
         const postIndex = data.posts.length - 1;
@@ -1348,11 +1315,23 @@ async function confirmCreatePost() {
             title: '📝 منشور جديد',
             message: `قام ${user ? user.name : 'مستخدم'} بإدراج منشور جديد${title ? ` بعنوان "${title}"` : ''} في المسار: ${getPathDisplay(currentStudyPath)}`,
             path: pathKey,
-            timestamp: new Date().toLocaleString('ar-YE'),
+            postIndex: postIndex,
+            timestamp: Date.now(),
             read: false
         };
         await studyDb.ref('notifications').push(notification);
         showNotificationInHome(notification);
+
+        // إرسال إشعار FCM
+        await sendFCMNotificationToAll(
+            '📝 منشور جديد',
+            `${user?.name || 'مستخدم'} نشر منشور جديد: "${title || 'بدون عنوان'}"`,
+            {
+                path: pathKey,
+                type: 'post_created',
+                postIndex: postIndex
+            }
+        );
 
         alert('✅ تم نشر المنشور بنجاح!');
 
@@ -1515,7 +1494,7 @@ async function confirmEditPost() {
             message: `قام ${user ? user.name : 'المدير'} بتعديل منشور "${oldTitle}" في المسار: ${getPathDisplay(currentStudyPath)}`,
             path: pathKey,
             postIndex: editingPostIndex,
-            timestamp: new Date().toLocaleString('ar-YE'),
+            timestamp: Date.now(),
             read: false,
             forceUpdate: true
         };
@@ -1582,7 +1561,7 @@ async function confirmDeletePost(index) {
             message: `قام ${user ? user.name : 'المدير'} بحذف منشور "${postTitle}" في المسار: ${getPathDisplay(currentStudyPath)}`,
             path: pathKey,
             postIndex: index,
-            timestamp: new Date().toLocaleString('ar-YE'),
+            timestamp: Date.now(),
             read: false,
             forceUpdate: true
         };
@@ -1608,7 +1587,7 @@ function startNotificationListener() {
     if (!studyDb) return;
 
     try {
-        notificationListener = studyDb.ref('notifications').limitToLast(10);
+        notificationListener = studyDb.ref('notifications').limitToLast(20);
         notificationListener.on('child_added', (snapshot) => {
             const notif = snapshot.val();
             if (notif) {
@@ -1716,6 +1695,18 @@ function showNotificationInHome(notif) {
         }
         if (notif.forceUpdate) {
             showAutoUpdateNotification(`📢 تحديث: ${notif.title}\n${notif.message}`);
+        }
+        // إضافة الإشعار إلى قائمة الإشعارات المحلية
+        if (notif.type && notif.title && notif.message) {
+            addNotification({
+                title: notif.title,
+                message: notif.message,
+                type: notif.type,
+                path: notif.path,
+                postIndex: notif.postIndex,
+                folderName: notif.folderName || notif.oldName || notif.newName,
+                timestamp: notif.timestamp || Date.now()
+            });
         }
     } catch (e) {
         console.log('تعذر عرض الإشعار.');
@@ -2081,62 +2072,457 @@ function showAutoUpdateNotification(message) {
 }
 
 // ========================================================================
-// 20. تهيئة التطبيق
+// 20. نظام الإشعارات المتقدم (UI + FCM)
 // ========================================================================
-function initStudyApp() {
-    initFirebase();
 
-    let user = getStudyUser();
-    if (!user) {
-        user = { name: 'زائر (أوفلاين)', role: 'student', phone: '' };
+// ====== VAPID KEY ======
+const VAPID_KEY = 'BLiXP9SU05ttQ0-BLyJXQZ3DHwTwgc3t0U4Ld7yE4ZA2USu3LWdJWDXCRKYQwJPaz6yvOZKSrwYO6pSJKvK4mFs';
+
+// ====== متغيرات الإشعارات ======
+let notificationsData = [];
+let isNotificationsPanelOpen = false;
+
+// ====== تحميل الإشعارات من التخزين المحلي ======
+function loadNotificationsFromStorage() {
+    try {
+        const stored = localStorage.getItem('study_notifications');
+        if (stored) {
+            notificationsData = JSON.parse(stored);
+        } else {
+            notificationsData = [];
+        }
+    } catch (e) {
+        notificationsData = [];
     }
+    updateNotificationBadge();
+}
 
-    currentStudyUser = user;
+// ====== حفظ الإشعارات في التخزين المحلي ======
+function saveNotificationsToStorage() {
+    try {
+        localStorage.setItem('study_notifications', JSON.stringify(notificationsData));
+    } catch (e) {
+        console.warn('تعذر حفظ الإشعارات:', e);
+    }
+    updateNotificationBadge();
+}
+
+// ====== تحديث العداد والشارة ======
+function updateNotificationBadge() {
+    const unreadCount = notificationsData.filter(n => !n.read).length;
+    const badge = document.getElementById('notifBadge');
+    const countDisplay = document.getElementById('notifCountDisplay');
+    
+    if (badge) {
+        if (unreadCount > 0) {
+            badge.style.display = 'flex';
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    if (countDisplay) {
+        countDisplay.textContent = unreadCount;
+    }
+}
+
+// ====== إضافة إشعار جديد ======
+function addNotification(notification) {
+    // التأكد من عدم وجود إشعار مكرر
+    const isDuplicate = notificationsData.some(n => 
+        n.message === notification.message && 
+        n.timestamp === notification.timestamp &&
+        n.type === notification.type
+    );
+    
+    if (isDuplicate) return;
+    
+    notification.id = notification.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    notification.read = false;
+    notification.createdAt = Date.now();
+    
+    notificationsData.unshift(notification);
+    
+    if (notificationsData.length > 100) {
+        notificationsData = notificationsData.slice(0, 100);
+    }
+    
+    saveNotificationsToStorage();
+    updateNotificationBadge();
+    renderNotificationsList();
+    
+    // عرض إشعار في المتصفح
+    showBrowserNotification(notification);
+}
+
+// ====== عرض إشعار في المتصفح ======
+function showBrowserNotification(notification) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
     
     try {
-        updateBreadcrumb();
-        updateButtons();
-        handleUrlParams();
-        loadCurrentFolder();
+        const notif = new Notification(notification.title || '📢 تحديث جديد', {
+            body: notification.message || '',
+            icon: '/logo.png',
+            tag: notification.id,
+            data: {
+                path: notification.path,
+                type: notification.type,
+                postIndex: notification.postIndex,
+                folderName: notification.folderName
+            }
+        });
+        
+        notif.onclick = function() {
+            window.focus();
+            if (this.data && this.data.path) {
+                navigateTo(this.data.path);
+                setTimeout(() => {
+                    if (this.data.postIndex !== undefined) {
+                        const mediaKey = `${this.data.path}_${this.data.postIndex}`;
+                        const card = document.getElementById(`postCard-${mediaKey}`);
+                        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 500);
+            }
+            notif.close();
+        };
+        
+        setTimeout(() => notif.close(), 10000);
     } catch (e) {
-        console.error("خطأ أثناء بناء الواجهة محلياً:", e);
+        console.warn('تعذر عرض إشعار المتصفح:', e);
     }
-
-    if (navigator.onLine && studyDb) {
-        startNotificationListener();
-    }
-
-    document.addEventListener('click', (e) => {
-        if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
-            e.target.classList.remove('active');
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeModal('createFolderModal');
-            closeModal('editFolderModal');
-            closeModal('createPostModal');
-            closeModal('editPostModal');
-            closeFilePreview();
-            const uploadOverlay = document.getElementById('uploadProgressOverlay');
-            if (uploadOverlay) uploadOverlay.style.display = 'none';
-        }
-    });
-
-    console.log('✅ تم تشغيل واجهة المواد الدراسية بنجاح');
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initStudyApp);
-} else {
-    initStudyApp();
+// ====== طلب إذن الإشعارات ======
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    
+    try {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+    } catch (e) {
+        return false;
+    }
 }
+
+// ====== عرض/إخفاء نافذة الإشعارات ======
+function toggleNotificationsPanel() {
+    isNotificationsPanelOpen = !isNotificationsPanelOpen;
+    const panel = document.getElementById('notificationsPanel');
+    const overlay = document.getElementById('notificationsOverlay');
+    
+    if (panel) {
+        panel.classList.toggle('open', isNotificationsPanelOpen);
+    }
+    if (overlay) {
+        overlay.classList.toggle('open', isNotificationsPanelOpen);
+    }
+    
+    if (isNotificationsPanelOpen) {
+        renderNotificationsList();
+        markAllNotificationsRead();
+    }
+}
+
+// ====== عرض قائمة الإشعارات ======
+function renderNotificationsList() {
+    const container = document.getElementById('notificationsList');
+    if (!container) return;
+    
+    if (notificationsData.length === 0) {
+        container.innerHTML = `
+            <div class="notif-empty">
+                <span class="empty-icon">📭</span>
+                لا توجد إشعارات
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    notificationsData.forEach((notif) => {
+        const isUnread = !notif.read;
+        const iconMap = {
+            'folder_created': '📁',
+            'folder_deleted': '🗑️',
+            'folder_renamed': '✏️',
+            'post_created': '📝',
+            'post_edited': '✏️',
+            'post_deleted': '🗑️',
+            'notification': '🔔',
+            'system': '⚙️'
+        };
+        const icon = iconMap[notif.type] || '🔔';
+        
+        const timeStr = notif.timestamp ? new Date(notif.timestamp).toLocaleString('ar-YE', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: 'numeric',
+            month: 'short'
+        }) : 'منذ قليل';
+        
+        let actionButton = '';
+        if (notif.path) {
+            let onClickAction = `navigateTo('${notif.path}')`;
+            let buttonText = '📂 الانتقال';
+            
+            if (notif.postIndex !== undefined && notif.postIndex !== null) {
+                onClickAction = `navigateToAndHighlight('${notif.path}', ${notif.postIndex})`;
+                buttonText = '📄 عرض المنشور';
+            } else if (notif.folderName) {
+                onClickAction = `navigateTo('${notif.path}')`;
+                buttonText = '📁 فتح المجلد';
+            }
+            
+            actionButton = `
+                <button class="goto-btn" onclick="${onClickAction}; toggleNotificationsPanel();">
+                    ${buttonText}
+                </button>
+            `;
+        }
+        
+        html += `
+            <div class="notif-item ${isUnread ? 'unread' : ''}">
+                <div class="notif-row">
+                    <span class="notif-icon">${icon}</span>
+                    <div class="notif-content">
+                        <div class="notif-title-row">
+                            <span class="notif-title">${escapeHtml(notif.title || 'تحديث')}</span>
+                            ${isUnread ? `<span class="unread-dot"></span>` : ''}
+                        </div>
+                        <div class="notif-message">${escapeHtml(notif.message || '')}</div>
+                        <div class="notif-footer">
+                            <span class="notif-time">🕒 ${timeStr}</span>
+                            <div class="notif-actions">
+                                ${actionButton}
+                                ${!isUnread ? `<span class="read-tag">✓ مقروء</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ====== تعليم جميع الإشعارات كمقروءة ======
+function markAllNotificationsRead() {
+    let hasUnread = false;
+    notificationsData.forEach(n => {
+        if (!n.read) {
+            n.read = true;
+            hasUnread = true;
+        }
+    });
+    if (hasUnread) {
+        saveNotificationsToStorage();
+        updateNotificationBadge();
+        renderNotificationsList();
+    }
+}
+
+// ====== مسح جميع الإشعارات ======
+function clearAllNotifications() {
+    if (!confirm('⚠️ هل أنت متأكد من مسح جميع الإشعارات؟')) return;
+    notificationsData = [];
+    saveNotificationsToStorage();
+    updateNotificationBadge();
+    renderNotificationsList();
+}
+
+// ====== الانتقال إلى منشور معين وتسليط الضوء عليه ======
+function navigateToAndHighlight(path, postIndex) {
+    navigateTo(path);
+    setTimeout(() => {
+        const mediaKey = `${path}_${postIndex}`;
+        const card = document.getElementById(`postCard-${mediaKey}`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.borderColor = '#d4af37';
+            card.style.boxShadow = '0 0 30px rgba(212, 175, 55, 0.2)';
+            card.style.background = 'rgba(212, 175, 55, 0.08)';
+            setTimeout(() => {
+                card.style.borderColor = '';
+                card.style.boxShadow = '';
+                card.style.background = '';
+            }, 3000);
+        }
+    }, 500);
+}
+
 // ========================================================================
-// 21. نظام تشخيص حالة النظام والموارد (Keep-Alive + Diagnostics)
+// 21. Firebase Cloud Messaging (FCM)
 // ========================================================================
 
-// 1. الحفاظ على استيقاظ سيرفر Render تلقائياً كل 10 دقائق
+let fcmMessaging = null;
+let fcmToken = null;
+let fcmInitialized = false;
+
+async function initFCM() {
+    try {
+        if (typeof firebase === 'undefined' || !firebase.messaging) {
+            console.warn('⚠️ Firebase Messaging غير متاح');
+            return null;
+        }
+        
+        if (!firebase.apps || !firebase.apps.length) {
+            firebase.initializeApp(STUDY_FIREBASE_CONFIG);
+        }
+        
+        fcmMessaging = firebase.messaging();
+        
+        const permission = await requestNotificationPermission();
+        if (!permission) {
+            console.warn('⚠️ تم رفض إذن الإشعارات');
+            return null;
+        }
+        
+        try {
+            fcmToken = await fcmMessaging.getToken({ vapidKey: VAPID_KEY });
+            console.log('✅ FCM Token:', fcmToken);
+            
+            if (studyDb) {
+                const user = getStudyUser();
+                const phone = user?.phone || 'anonymous';
+                await studyDb.ref(`fcm_tokens/${phone}`).set({
+                    token: fcmToken,
+                    device: navigator.userAgent.includes('iPhone') ? 'ios' : 'web',
+                    timestamp: Date.now(),
+                    userAgent: navigator.userAgent,
+                    userName: user?.name || 'مستخدم'
+                });
+                console.log('✅ FCM Token saved to database');
+            }
+            
+            // معالجة الإشعارات الأمامية
+            fcmMessaging.onMessage((payload) => {
+                console.log('📨 Foreground message received:', payload);
+                handleFCMNotification(payload);
+            });
+            
+            fcmInitialized = true;
+            return fcmToken;
+            
+        } catch (tokenError) {
+            console.warn('⚠️ فشل الحصول على FCM Token:', tokenError);
+            return null;
+        }
+        
+    } catch (error) {
+        console.warn('⚠️ فشل تهيئة FCM:', error);
+        return null;
+    }
+}
+
+function handleFCMNotification(payload) {
+    try {
+        const notification = payload.notification || {};
+        const data = payload.data || {};
+        
+        const title = notification.title || data.title || '📢 تحديث جديد';
+        const body = notification.body || data.body || '';
+        const path = data.path || '';
+        const type = data.type || 'notification';
+        const postIndex = data.postIndex !== undefined ? parseInt(data.postIndex) : undefined;
+        const folderName = data.folderName || '';
+        
+        addNotification({
+            title: title,
+            message: body,
+            type: type,
+            path: path,
+            postIndex: postIndex,
+            folderName: folderName,
+            timestamp: Date.now()
+        });
+        
+        if (navigator.vibrate) {
+            navigator.vibrate(200);
+        }
+        
+    } catch (error) {
+        console.warn('خطأ في معالجة إشعار FCM:', error);
+    }
+}
+
+// ====== إرسال إشعار عبر الخادم ======
+async function sendFCMNotificationToAll(title, message, data = {}) {
+    if (!navigator.onLine) {
+        console.warn('⚠️ أنت غير متصل بالإنترنت');
+        return;
+    }
+    
+    if (!studyDb) {
+        console.warn('⚠️ قاعدة البيانات غير متاحة');
+        return;
+    }
+    
+    try {
+        const snapshot = await studyDb.ref('fcm_tokens').once('value');
+        const tokens = snapshot.val() || {};
+        
+        const tokenList = Object.values(tokens)
+            .filter(t => t.token)
+            .map(t => t.token);
+        
+        if (tokenList.length === 0) {
+            console.log('⚠️ لا يوجد مستخدمين مسجلين للإشعارات');
+            return;
+        }
+        
+        const response = await fetch(`${TELEGRAM_SERVER_URL}/api/send-notification`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tokens: tokenList,
+                title: title,
+                body: message,
+                data: data
+            })
+        });
+        
+        const result = await response.json();
+        console.log('📨 نتيجة إرسال الإشعار:', result);
+        
+        if (result.success) {
+            console.log(`✅ تم إرسال الإشعار إلى ${result.sentCount} مستخدم`);
+        }
+        
+    } catch (error) {
+        console.error('خطأ في إرسال الإشعار:', error);
+    }
+}
+
+// ========================================================================
+// 22. دالة إرسال إشعار من واجهة المستخدم
+// ========================================================================
+window.sendNotificationToAll = async function() {
+    const title = prompt('📢 أدخل عنوان الإشعار:');
+    if (!title) return;
+    
+    const message = prompt('📝 أدخل نص الإشعار:');
+    if (!message) return;
+    
+    await sendFCMNotificationToAll(title, message, {
+        type: 'notification',
+        path: getPathKey(currentStudyPath)
+    });
+    
+    alert('✅ تم إرسال الإشعار لجميع المستخدمين!');
+};
+
+// ========================================================================
+// 23. نظام تشخيص حالة النظام والموارد (Keep-Alive + Diagnostics)
+// ========================================================================
+
 function startRenderKeepAlive() {
     setInterval(async () => {
         if (navigator.onLine) {
@@ -2147,10 +2533,9 @@ function startRenderKeepAlive() {
                 console.warn('⚠️ Render Keep-Alive Ping Failed');
             }
         }
-    }, 10 * 60 * 1000); // 10 دقائق
+    }, 10 * 60 * 1000);
 }
 
-// 2. فتح النافذة وتشغيل الفحص الشامل
 function openSystemDiagnosticsModal() {
     const modal = document.getElementById('diagnosticsModal');
     if (modal) {
@@ -2159,10 +2544,8 @@ function openSystemDiagnosticsModal() {
     }
 }
 
-// 3. تنفيذ الفحص واستخراج الأرقام الحقيقية
-// دالة مساعدة لحساب حجم IndexedDB بدقة
 async function getIndexedDBSize() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         if (!window.indexedDB) {
             resolve(0);
             return;
@@ -2289,9 +2672,6 @@ async function runSystemDiagnostics() {
     const storageQuota = document.getElementById('diag-storage-quota');
     const storagePercent = document.getElementById('diag-storage-percent');
     const storageBar = document.getElementById('diag-storage-bar');
-    const indexedDbSize = document.getElementById('diag-indexeddb-size');
-    const localStorageSize = document.getElementById('diag-localstorage-size');
-    const totalFilesCount = document.getElementById('diag-files-count');
 
     if (statusRender) statusRender.innerHTML = '⏳ فحص...';
     if (statusFirebase) statusFirebase.innerHTML = '⏳ فحص...';
@@ -2321,107 +2701,40 @@ async function runSystemDiagnostics() {
 
     // ب. فحص Firebase Database
     if (navigator.onLine && studyDb) {
-    try {
-        const connectedRef = studyDb.ref('.info/connected');
-        connectedRef.once('value', (snap) => {
-            if (snap.val() === true) {
-                if (statusFirebase) {
-                    statusFirebase.textContent = 'متصل ✅';
-                    statusFirebase.style.color = '#10b981';
+        try {
+            const connectedRef = studyDb.ref('.info/connected');
+            connectedRef.once('value', (snap) => {
+                if (snap.val() === true) {
+                    if (statusFirebase) {
+                        statusFirebase.textContent = 'متصل ✅';
+                        statusFirebase.style.color = '#10b981';
+                    }
+                } else {
+                    if (statusFirebase) {
+                        statusFirebase.textContent = 'منقطع ⚠️';
+                        statusFirebase.style.color = '#f59e0b';
+                    }
                 }
-            } else {
-                if (statusFirebase) {
-                    statusFirebase.textContent = 'منقطع ⚠️';
-                    statusFirebase.style.color = '#f59e0b';
-                }
+            });
+        } catch (e) {
+            if (statusFirebase) {
+                statusFirebase.textContent = 'خطأ في الاتصال ❌';
+                statusFirebase.style.color = '#ef4444';
             }
-        });
-    } catch (e) {
+        }
+    } else if (!navigator.onLine) {
         if (statusFirebase) {
-            statusFirebase.textContent = 'خطأ في الاتصال ❌';
-            statusFirebase.style.color = '#ef4444';
+            statusFirebase.textContent = 'أوفلاين 📡';
+            statusFirebase.style.color = '#94a3b8';
         }
-    }
-} else if (!navigator.onLine) {
-    if (statusFirebase) {
-        statusFirebase.textContent = 'أوفلاين 📡';
-        statusFirebase.style.color = '#94a3b8';
-    }
-} else {
-    if (statusFirebase) {
-        statusFirebase.textContent = 'غير مهيأ ⚠️';
-        statusFirebase.style.color = '#f59e0b';
-    }
-}
-
-    // ج. حساب حجم IndexedDB بدقة
-    try {
-        const idbSize = await getIndexedDBSize();
-        const idbSizeMB = (idbSize / (1024 * 1024)).toFixed(2);
-        if (indexedDbSize) {
-            indexedDbSize.textContent = `${idbSizeMB} MB`;
-            indexedDbSize.style.color = idbSize > 0 ? '#10b981' : '#94a3b8';
-        }
-    } catch (err) {
-        if (indexedDbSize) {
-            indexedDbSize.textContent = 'تعذر الحساب';
-            indexedDbSize.style.color = '#ef4444';
+    } else {
+        if (statusFirebase) {
+            statusFirebase.textContent = 'غير مهيأ ⚠️';
+            statusFirebase.style.color = '#f59e0b';
         }
     }
 
-    // د. حساب حجم LocalStorage
-    try {
-        let localStorageTotal = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('study_cache_')) {
-                const value = localStorage.getItem(key);
-                if (value) {
-                    localStorageTotal += new Blob([value]).size;
-                }
-            }
-        }
-        const localStorageMB = (localStorageTotal / (1024 * 1024)).toFixed(2);
-        if (localStorageSize) {
-            localStorageSize.textContent = `${localStorageMB} MB`;
-            localStorageSize.style.color = localStorageTotal > 0 ? '#10b981' : '#94a3b8';
-        }
-    } catch (err) {
-        if (localStorageSize) {
-            localStorageSize.textContent = 'تعذر الحساب';
-            localStorageSize.style.color = '#ef4444';
-        }
-    }
-
-    // هـ. حساب عدد الملفات المحفوظة
-    try {
-        const idb = await openIDB();
-        const tx = idb.transaction('media', 'readonly');
-        const store = tx.objectStore('media');
-        const countRequest = store.count();
-        
-        countRequest.onsuccess = function() {
-            const count = countRequest.result;
-            if (totalFilesCount) {
-                totalFilesCount.textContent = `${count} ملف`;
-                totalFilesCount.style.color = count > 0 ? '#10b981' : '#94a3b8';
-            }
-        };
-        
-        countRequest.onerror = function() {
-            if (totalFilesCount) {
-                totalFilesCount.textContent = 'تعذر الحساب';
-                totalFilesCount.style.color = '#ef4444';
-            }
-        };
-    } catch (err) {
-        if (totalFilesCount) {
-            totalFilesCount.textContent = 'تعذر الحساب';
-            totalFilesCount.style.color = '#ef4444';
-        }
-    }
-
-    // و. حساب إجمالي التخزين المستخدم (IndexedDB + LocalStorage)
+    // ج. حساب إجمالي التخزين المستخدم
     try {
         const idbSize = await getIndexedDBSize();
         let localStorageTotal = 0;
@@ -2460,14 +2773,9 @@ async function runSystemDiagnostics() {
         }
     }
 }
-// دمج النبض مع دالة تهيئة التطبيق الرئيسية
-const originalInitStudyApp = initStudyApp;
-initStudyApp = function() {
-    originalInitStudyApp();
-    startRenderKeepAlive();
-};
+
 // ========================================================================
-// دالة تفريغ ذاكرة IndexedDB والتخزين المؤقت محلياً
+// 24. تنظيف التخزين المؤقت
 // ========================================================================
 async function clearAppOfflineCache() {
     if (!confirm("هل أنت تأكد من تنظيف الذاكرة المؤقتة؟\nسيتم حذف الملفات المحفوظة للأوفلاين وتفريغ مساحة الهاتف، ويمكنك إعادة تنزيلها لاحقاً عند الاتصال بالنت.")) {
@@ -2475,35 +2783,27 @@ async function clearAppOfflineCache() {
     }
 
     try {
-        // 1. مسح كاش المتصفح
         if ('caches' in window) {
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => caches.delete(name)));
         }
 
-        // 2. إغلاق قاعدة البيانات الحالية لفك القفل
         if (idbInstance) {
             idbInstance.close();
             idbInstance = null;
         }
 
-        // 3. حذف قاعدة البيانات الصحيحة باسم StudyMaterialsDB
         if (window.indexedDB) {
             const req = indexedDB.deleteDatabase("StudyMaterialsDB");
             
             req.onsuccess = async () => {
                 console.log("تم حذف قاعدة البيانات المحلية بنجاح");
-                
-                // إعادة تحميل الواجهة لإعادة إظهار أزرار الحفظ وتصفيح الحالة
                 if (typeof loadCurrentFolder === 'function') {
                     await loadCurrentFolder();
                 }
-                
-                // تحديث تقرير الذاكرة والإنترنت
                 if (typeof runSystemDiagnostics === 'function') {
                     runSystemDiagnostics();
                 }
-
                 alert("تم تنظيف التخزين المؤقت بنجاح وتحرير مساحة الهاتف! 🎉");
             };
 
@@ -2517,3 +2817,97 @@ async function clearAppOfflineCache() {
         alert("حدث خطأ أثناء تنظيف الذاكرة المؤقتة.");
     }
 }
+
+// ========================================================================
+// 25. تهيئة التطبيق
+// ========================================================================
+
+function initNotifications() {
+    loadNotificationsFromStorage();
+    
+    setTimeout(async () => {
+        try {
+            const permission = await requestNotificationPermission();
+            if (permission) {
+                console.log('✅ Notification permission granted');
+                await initFCM();
+            } else {
+                console.warn('⚠️ Notification permission denied');
+            }
+        } catch (e) {
+            console.warn('⚠️ Notification initialization error:', e);
+        }
+    }, 2000);
+}
+
+function initStudyApp() {
+    initFirebase();
+
+    let user = getStudyUser();
+    if (!user) {
+        user = { name: 'زائر (أوفلاين)', role: 'student', phone: '' };
+    }
+
+    currentStudyUser = user;
+    
+    try {
+        updateBreadcrumb();
+        updateButtons();
+        handleUrlParams();
+        loadCurrentFolder();
+    } catch (e) {
+        console.error("خطأ أثناء بناء الواجهة محلياً:", e);
+    }
+
+    if (navigator.onLine && studyDb) {
+        startNotificationListener();
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
+            e.target.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeModal('createFolderModal');
+            closeModal('editFolderModal');
+            closeModal('createPostModal');
+            closeModal('editPostModal');
+            closeFilePreview();
+            const uploadOverlay = document.getElementById('uploadProgressOverlay');
+            if (uploadOverlay) uploadOverlay.style.display = 'none';
+        }
+    });
+
+    // تهيئة الإشعارات
+    initNotifications();
+    
+    // بدء Keep-Alive
+    startRenderKeepAlive();
+
+    console.log('✅ تم تشغيل واجهة المواد الدراسية بنجاح');
+}
+
+// ========================================================================
+// 26. تشغيل التطبيق
+// ========================================================================
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStudyApp);
+} else {
+    initStudyApp();
+}
+
+// تهيئة الإشعارات عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotificationsFromStorage();
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openNotifications') === 'true') {
+        setTimeout(() => toggleNotificationsPanel(), 500);
+    }
+});
+
+console.log('✅ نظام الإشعارات المتقدم تم تشغيله بنجاح!');
