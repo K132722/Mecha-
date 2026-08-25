@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mecha-pwa-v27'; // رفع الإصدار
+const CACHE_NAME = 'mecha-pwa-v28';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -12,12 +12,11 @@ const STATIC_ASSETS = [
     './document.png'
 ];
 
-// 1. تثبيت وتخزين الملفات الأساسية محلياً
+// 1. تثبيت وتخزين الملفات
 self.addEventListener('install', (e) => {
     self.skipWaiting();
     e.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
-            // تخزين كل ملف على حدة
             for (const asset of STATIC_ASSETS) {
                 try {
                     await cache.add(asset);
@@ -31,7 +30,7 @@ self.addEventListener('install', (e) => {
     );
 });
 
-// 2. تنظيف الإصدارات القديمة
+// 2. تنظيف الإصدارات القديمة - ✅ بدون self.clients.claim()
 self.addEventListener('activate', (e) => {
     e.waitUntil(
         caches.keys().then((keys) => {
@@ -43,7 +42,8 @@ self.addEventListener('activate', (e) => {
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        })
+        // ✅ تم حذف .then(() => self.clients.claim())
     );
 });
 
@@ -51,7 +51,6 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
     const url = e.request.url;
 
-    // استثناءات: لا نخزن طلبات API
     if (
         e.request.method !== 'GET' || 
         url.includes('firebaseio.com') || 
@@ -63,15 +62,13 @@ self.addEventListener('fetch', (e) => {
         url.includes('/view/') ||
         url.includes('/api/')
     ) {
-        return; // لا نتدخل في هذه الطلبات
+        return;
     }
 
-    // طلبات التنقل (صفحات HTML)
     if (e.request.mode === 'navigate') {
         e.respondWith(
             fetch(e.request)
                 .then(response => {
-                    // تخزين الصفحة للاستخدام المستقبلي
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(e.request, clone);
@@ -79,7 +76,6 @@ self.addEventListener('fetch', (e) => {
                     return response;
                 })
                 .catch(() => {
-                    // إذا فشل التحميل، اعرض من الكاش
                     return caches.match(e.request)
                         .then(cached => cached || caches.match('./study-materials.html'));
                 })
@@ -87,13 +83,11 @@ self.addEventListener('fetch', (e) => {
         return;
     }
 
-    // الأصول الثابتة: Cache First
     e.respondWith(
         caches.match(e.request).then((cachedResponse) => {
             if (cachedResponse) {
                 return cachedResponse;
             }
-            // التحميل من الشبكة وحفظه
             return fetch(e.request).then((response) => {
                 if (response && response.status === 200) {
                     const clone = response.clone();
@@ -103,7 +97,6 @@ self.addEventListener('fetch', (e) => {
                 }
                 return response;
             }).catch(() => {
-                // إذا فشل كل شيء، اعرض صفحة الخطأ
                 if (e.request.mode === 'navigate') {
                     return caches.match('./study-materials.html');
                 }
@@ -112,3 +105,20 @@ self.addEventListener('fetch', (e) => {
         })
     );
 });
+
+// ================================================================
+// ✅ دعم النبض (Keep-Alive) - أضف هذا في نهاية الملف
+// ================================================================
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'KEEP_ALIVE_PING') {
+        if (event.ports && event.ports.length > 0) {
+            event.ports[0].postMessage({ 
+                type: 'KEEP_ALIVE_PONG',
+                timestamp: Date.now()
+            });
+        }
+    }
+});
+
+console.log('✅ SW Keep-alive support added');
