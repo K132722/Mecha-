@@ -2901,13 +2901,72 @@ if (document.readyState === 'loading') {
 }
 
 // تهيئة الإشعارات عند تحميل الصفحة
+// ... الكود السابق ...
+
+// ================================================================
+// ✅ تهيئة الإشعارات ونظام Keep-Alive عند تحميل الصفحة
+// ================================================================
+
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. تحميل الإشعارات المحفوظة
     loadNotificationsFromStorage();
     
+    // 2. فتح نافذة الإشعارات إذا طلب ذلك
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('openNotifications') === 'true') {
         setTimeout(() => toggleNotificationsPanel(), 500);
     }
+    
+    // 3. ✅ تشغيل نظام Keep-Alive (مثل OneSignal)
+    startPageKeepAlive();
+    setInterval(refreshServiceWorker, 5 * 60 * 1000);
+    console.log('✅ Keep-alive system started (like OneSignal)');
 });
 
 console.log('✅ نظام الإشعارات المتقدم تم تشغيله بنجاح!');
+
+// ================================================================
+// ✅ نظام Keep-Alive (مثل OneSignal)
+// ================================================================
+
+function startPageKeepAlive() {
+    if (!('serviceWorker' in navigator)) return;
+    
+    setInterval(async () => {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            if (registration.active) {
+                registration.active.postMessage({ 
+                    type: 'KEEP_ALIVE_PING',
+                    timestamp: Date.now()
+                });
+                console.log('💓 Keep-alive ping sent from page');
+            }
+        } catch (error) {
+            // silent fail
+        }
+    }, 10000);
+}
+
+async function refreshServiceWorker() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.update();
+        console.log('🔄 Service Worker refreshed');
+    } catch (error) {
+        console.warn('⚠️ Service Worker refresh failed:', error);
+    }
+}
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'KEEP_ALIVE_PING') {
+            if (event.source) {
+                event.source.postMessage({
+                    type: 'KEEP_ALIVE_PONG',
+                    timestamp: Date.now()
+                });
+            }
+        }
+    });
+}
