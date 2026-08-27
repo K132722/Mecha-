@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
     './app.js',
     './firebase-messaging-sw.js',
     './study-materials.js',
+    './document.png',
     './manifest.json',
     './logo.png'
 ];
