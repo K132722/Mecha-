@@ -12,7 +12,7 @@ const MEMBERS = {
     "777598384": { name: "سليم الوافي", role: "member" }
 };
 
-const ADMIN_PHONE = "774132722";
+const ADMIN_PHONE = "+967774132722";
 const firebaseConfig = {
     apiKey: "AIzaSyBL_cR0OwbQ3KPYemGY0Q8aliIlXmQkBrU",
     authDomain: "khaled-12ab5.firebaseapp.com",
