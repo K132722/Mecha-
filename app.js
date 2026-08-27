@@ -1,11 +1,7 @@
 // ==========================================================================
-// 1. إعدادات Firebase والأعضاء الأساسيين (بدون رموز)
+// 1. البيانات الأساسية للأعضاء وإعدادات Firebase
 // ==========================================================================
-const ADMIN_PHONE = "774132722";
-const ADMIN_NAME = "أبو جراح الخولاني";
-
-// قائمة الأعضاء الأساسيين (اسم + رقم هاتف فقط)
-const BASE_MEMBERS = {
+const MEMBERS = {
     "774132722": { name: "أبو جراح الخولاني", role: "admin" },
     "774339391": { name: "أحمد الأصبحي", role: "member" },
     "774882442": { name: "أحمد أنعم", role: "member" },
@@ -16,6 +12,7 @@ const BASE_MEMBERS = {
     "777598384": { name: "سليم الوافي", role: "member" }
 };
 
+const ADMIN_PHONE = "774132722";
 const firebaseConfig = {
     apiKey: "AIzaSyBL_cR0OwbQ3KPYemGY0Q8aliIlXmQkBrU",
     authDomain: "khaled-12ab5.firebaseapp.com",
@@ -30,658 +27,533 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let currentUser = null;
-let pendingApprovalData = null;
-let currentPhoneForVerification = null;
-let verificationCode = null;
+let currentMember = null;
+let hiddenRandomNumber = null;
+let notificationsData = [];
+let unreadCount = 0;
+let isFirstLoad = true; // لمنع تكرار التحقق
 
 // توليد أو جلب معرف الجهاز الفريد
 function getDeviceId() {
     let devId = localStorage.getItem('app_device_id');
     if (!devId) {
-        devId = 'DEV_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        devId = 'dev_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('app_device_id', devId);
     }
     return devId;
 }
 
 // ==========================================================================
-// 2. تهيئة الأعضاء الأساسيين في Firebase (مرة واحدة)
-// ==========================================================================
-function initializeBaseMembers() {
-    Object.entries(BASE_MEMBERS).forEach(([phone, data]) => {
-        db.ref(`users/${phone}`).once('value').then(snapshot => {
-            if (!snapshot.exists()) {
-                db.ref(`users/${phone}`).set({
-                    name: data.name,
-                    role: data.role,
-                    registeredAt: new Date().toLocaleString('ar-YE'),
-                    isBaseMember: true
-                });
-            }
-        });
-    });
-}
-
-// استدعاء التهيئة
-initializeBaseMembers();
-
-// ==========================================================================
-// 3. نظام تسجيل الدخول
+// 2. بدء التطبيق - التحقق من الجلسة فوراً
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
     
-    // التحقق من الجلسة المحفوظة
+    // أولاً: إخفاء شاشة الدخول افتراضياً
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('appContent').style.display = 'none';
+    
+    // التحقق من وجود جلسة محفوظة
     const savedUserSession = localStorage.getItem('mecha_user_session');
+    
     if (savedUserSession) {
-        currentUser = JSON.parse(savedUserSession);
-        checkDevicePermission(currentUser.phone);
-    } else {
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('appContent').style.display = 'none';
-        showStep(1);
+        try {
+            currentUser = JSON.parse(savedUserSession);
+            // التحقق من صحة بيانات الجلسة
+            if (currentUser && currentUser.phone && currentUser.name) {
+                console.log('✅ جلسة موجودة للمستخدم:', currentUser.name);
+                // تشغيل التطبيق مباشرة (بدون التحقق من السيرفر لتسريع العملية)
+                launchAppDirectly();
+                
+                // في الخلفية، تحقق من صحة الجلسة مع السيرفر (اختياري)
+                if (navigator.onLine) {
+                    verifyDeviceSessionInBackground(currentUser);
+                }
+                return;
+            }
+        } catch (e) {
+            console.log('❌ خطأ في قراءة الجلسة:', e);
+            localStorage.removeItem('mecha_user_session');
+        }
     }
     
-    // مراقبة طلبات الموافقة الجديدة (للمشرف فقط)
-    db.ref('pending_approvals').on('child_added', (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
-        const user = getCurrentUser();
-        if (user && user.phone === ADMIN_PHONE) {
-            showApprovalToast(data);
-        }
-    });
+    // لا توجد جلسة صالحة -> عرض شاشة الدخول
+    console.log('🔐 لا توجد جلسة صالحة، عرض شاشة الدخول');
+    showLoginScreen();
 });
 
-// عرض الخطوة المطلوبة
-function showStep(step) {
-    document.getElementById('step1').style.display = step === 1 ? 'block' : 'none';
-    document.getElementById('step2').style.display = step === 2 ? 'block' : 'none';
-    document.getElementById('phoneStatus').textContent = '';
-    document.getElementById('verifyStatus').textContent = '';
+// ==========================================================================
+// 3. عرض شاشة الدخول
+// ==========================================================================
+function showLoginScreen() {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('appContent').style.display = 'none';
+    document.getElementById('stepPhone').style.display = 'block';
+    document.getElementById('stepRequestCode').style.display = 'none';
+    document.getElementById('loginMsg').innerHTML = '';
+    document.getElementById('loginMsg2').innerHTML = '';
+    document.getElementById('phoneInput').value = '';
+    document.getElementById('codeInput').value = '';
 }
 
 // ==========================================================================
-// 4. الخطوة 1: التحقق من رقم الهاتف
+// 4. التحقق من رقم الهاتف
 // ==========================================================================
 document.getElementById('btnCheckPhone').addEventListener('click', () => {
     const phone = document.getElementById('phoneInput').value.trim();
-    const statusEl = document.getElementById('phoneStatus');
-
+    const msgEl = document.getElementById('loginMsg');
+    
     if (!phone) {
-        statusEl.textContent = '⚠️ يرجى إدخال رقم الهاتف';
-        statusEl.style.color = 'var(--error-color)';
+        msgEl.innerHTML = '⚠️ يرجى إدخال رقم الهاتف!';
+        msgEl.style.color = '#ff4757';
         return;
     }
 
-    if (phone.length < 9 || phone.length > 10) {
-        statusEl.textContent = '⚠️ رقم الهاتف يجب أن يكون 9-10 أرقام';
-        statusEl.style.color = 'var(--error-color)';
+    const member = MEMBERS[phone];
+    if (!member) {
+        msgEl.innerHTML = '❌ رقم الهاتف غير مسجل في المنظومة!';
+        msgEl.style.color = '#ff4757';
         return;
     }
 
-    // التحقق من وجود المستخدم في Firebase
-    db.ref(`users/${phone}`).once('value').then(snapshot => {
-        const userData = snapshot.val();
-        
-        if (userData) {
-            // المستخدم موجود
-            currentPhoneForVerification = phone;
-            
-            // إذا كان المشرف - دخول مباشر (بدون رمز)
-            if (phone === ADMIN_PHONE) {
-                loginUser(phone);
-                return;
-            }
-            
-            // التحقق من الجهاز
-            checkDevicePermission(phone);
-        } else {
-            // مستخدم جديد - يطلب رمز التحقق
-            currentPhoneForVerification = phone;
-            showStep(2);
-            statusEl.textContent = '✅ رقم غير مسجل، يرجى إرسال طلب للمشرف';
-            statusEl.style.color = 'var(--gold-secondary)';
-            
-            // تشغيل زر إرسال واتساب تلقائياً مع رسالة مناسبة
-            document.getElementById('btnSendWhatsApp').click();
-        }
-    }).catch(() => {
-        // في حال عدم الاتصال - التحقق من localStorage
-        const storedUser = localStorage.getItem(`user_${phone}`);
-        if (storedUser) {
-            currentPhoneForVerification = phone;
-            checkDevicePermission(phone);
-        } else {
-            statusEl.textContent = '⚠️ يرجى الاتصال بالإنترنت للتحقق من المستخدم';
-            statusEl.style.color = 'var(--error-color)';
-        }
-    });
+    // حفظ العضو وتوليد الرقم العشوائي
+    currentMember = { phone, ...member };
+    hiddenRandomNumber = Math.floor(10000 + Math.random() * 90000).toString();
+    localStorage.setItem('temp_auth_code', hiddenRandomNumber);
+
+    // عرض اسم المستخدم
+    document.getElementById('verifiedUserName').innerHTML = `👤 المهندس <strong style="color:var(--gold-secondary);">${member.name}</strong>`;
+
+    // توليد وعرض الرمز المشفر
+    generateAndDisplayEncodedCode();
+
+    // الانتقال للخطوة الثانية
+    document.getElementById('stepPhone').style.display = 'none';
+    document.getElementById('stepRequestCode').style.display = 'block';
+    msgEl.innerHTML = '';
 });
 
 // ==========================================================================
-// 5. التحقق من صلاحية الجهاز
+// 5. توليد وعرض الرمز المشفر
 // ==========================================================================
-function checkDevicePermission(phone) {
-    // إذا كان المشرف - دخول مباشر
-    if (phone === ADMIN_PHONE) {
-        loginUser(phone);
+function generateAndDisplayEncodedCode() {
+    if (!currentMember || !hiddenRandomNumber) {
+        return;
+    }
+    
+    const requestText = `${hiddenRandomNumber}\nمرحبا أريد منحي الإذن ورمز الدخول للتطبيق`;
+    const encodedText = btoa(unescape(encodeURIComponent(requestText)));
+    
+    const displayInput = document.getElementById('encodedCodeDisplay');
+    if (displayInput) {
+        displayInput.value = encodedText;
+        displayInput.style.color = '#4fc3f7';
+    }
+    
+    return encodedText;
+}
+
+// ==========================================================================
+// 6. نسخ الرمز المشفر
+// ==========================================================================
+document.getElementById('btnCopyEncoded').addEventListener('click', async () => {
+    const displayInput = document.getElementById('encodedCodeDisplay');
+    
+    if (!displayInput || !displayInput.value || displayInput.value === 'جاري التوليد...') {
+        alert('⚠️ يرجى التحقق من رقم الهاتف أولاً');
+        return;
+    }
+    
+    try {
+        await navigator.clipboard.writeText(displayInput.value);
+        const btn = document.getElementById('btnCopyEncoded');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ تم النسخ';
+        btn.style.background = '#2ed573';
+        btn.style.borderColor = '#2ed573';
+        btn.style.color = '#fff';
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.style.color = '';
+        }, 2500);
+    } catch {
+        displayInput.select();
+        document.execCommand('copy');
+        alert('✅ تم نسخ الرمز بنجاح!');
+    }
+});
+
+// ==========================================================================
+// 7. طلب التحقق عبر واتساب
+// ==========================================================================
+document.getElementById('btnRequestCode').addEventListener('click', () => {
+    if (!currentMember || !hiddenRandomNumber) {
+        alert('⚠️ يرجى التحقق من رقم الهاتف أولاً.');
         return;
     }
 
-    const deviceId = getDeviceId();
+    const encodedText = document.getElementById('encodedCodeDisplay').value;
+    if (!encodedText || encodedText === 'جاري التوليد...') {
+        alert('⚠️ حدث خطأ في توليد الرمز');
+        return;
+    }
+
+    const waLink = `https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(encodedText)}`;
+    window.open(waLink, '_blank');
     
-    // جلب الأجهزة المسجلة لهذا المستخدم
-    db.ref(`users_devices/${phone}`).once('value').then(snapshot => {
-        const devices = snapshot.val() || {};
+    document.getElementById('loginMsg2').innerHTML = '📱 تم فتح واتساب، أرسل الرمز المشفر للمشرف وانتظر الرد.';
+    document.getElementById('loginMsg2').style.color = 'var(--gold-secondary)';
+});
+
+// ==========================================================================
+// 8. التحقق من رمز الدخول
+// ==========================================================================
+document.getElementById('btnVerifyCode').addEventListener('click', () => {
+    const enteredCode = document.getElementById('codeInput').value.trim();
+    const msgEl = document.getElementById('loginMsg2');
+    
+    if (!enteredCode) {
+        msgEl.innerHTML = '⚠️ يرجى إدخال رمز التحقق!';
+        msgEl.style.color = '#ff4757';
+        return;
+    }
+
+    if (!hiddenRandomNumber) {
+        msgEl.innerHTML = '⚠️ يرجى طلب رمز التحقق أولاً!';
+        msgEl.style.color = '#ff4757';
+        return;
+    }
+
+    const correctCode = (parseInt(hiddenRandomNumber) * 3).toString();
+
+    if (enteredCode === correctCode) {
+        msgEl.innerHTML = '✅ رمز صحيح، جاري التحقق من الجهاز...';
+        msgEl.style.color = '#2ed573';
+        
+        const deviceId = getDeviceId();
+        handleDeviceRegistration(currentMember.phone, deviceId);
+    } else {
+        msgEl.innerHTML = '❌ رمز التحقق غير صحيح!';
+        msgEl.style.color = '#ff4757';
+    }
+});
+
+// ==========================================================================
+// 9. إدارة تسجيل الأجهزة
+// ==========================================================================
+async function handleDeviceRegistration(phone, deviceId) {
+    try {
+        const snap = await db.ref(`users/${phone}/devices`).once('value');
+        const devices = snap.val() || {};
+        
+        if (devices[deviceId]) {
+            completeLogin(phone, deviceId);
+            return;
+        }
+        
         const deviceKeys = Object.keys(devices);
         
-        // إذا كان الجهاز مسجلاً مسبقاً - دخول مباشر
-        if (devices[deviceId]) {
-            logDeviceAccess(phone, deviceId, 'existing');
-            loginUser(phone);
-            return;
-        }
-
-        // إذا كان هناك أجهزة مسجلة أخرى - طلب موافقة
-        if (deviceKeys.length > 0) {
-            // جلب اسم المستخدم
-            db.ref(`users/${phone}/name`).once('value').then(nameSnap => {
-                const userName = nameSnap.val() || phone;
-                // عرض رسالة للمستخدم
-                document.getElementById('phoneStatus').textContent = 
-                    `⚠️ هذا الحساب مسجل من قبل على جهاز آخر. جاري إرسال طلب موافقة للمشرف...`;
-                document.getElementById('phoneStatus').style.color = 'var(--gold-secondary)';
-                requestDeviceApproval(phone, deviceId, userName);
+        if (deviceKeys.length === 0) {
+            await db.ref(`users/${phone}/devices/${deviceId}`).set({
+                registeredAt: new Date().toLocaleString('ar-YE'),
+                lastActive: new Date().toLocaleString('ar-YE'),
+                status: 'active'
             });
+            logUserActivity(phone, deviceId, 'first_login');
+            completeLogin(phone, deviceId);
+        } else {
+            requestDeviceApproval(phone, deviceId);
+        }
+    } catch (e) {
+        console.error('خطأ في التحقق من الجهاز:', e);
+        // في حالة عدم وجود اتصال، نسمح بالدخول
+        completeLogin(phone, deviceId);
+    }
+}
+
+function requestDeviceApproval(phone, deviceId) {
+    const member = MEMBERS[phone];
+    const deviceInfo = {
+        phone: phone,
+        memberName: member.name,
+        deviceId: deviceId,
+        userAgent: navigator.userAgent.slice(0, 50),
+        timestamp: new Date().toLocaleString('ar-YE'),
+        status: 'pending'
+    };
+
+    db.ref(`pending_approvals/${phone}`).set(deviceInfo);
+    
+    sendAdminNotification({
+        type: 'device_approval',
+        title: '🔐 طلب جهاز جديد',
+        message: `المهندس ${member.name} يطلب الموافقة على جهاز جديد`,
+        data: deviceInfo
+    });
+
+    const msgEl = document.getElementById('loginMsg2');
+    msgEl.innerHTML = '⏳ تم إرسال طلبك للمشرف، يرجى الانتظار للموافقة...';
+    msgEl.style.color = 'var(--gold-secondary)';
+    
+    listenForApproval(phone, deviceId);
+}
+
+function listenForApproval(phone, deviceId) {
+    const approvalRef = db.ref(`pending_approvals/${phone}`);
+    
+    approvalRef.on('value', (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        
+        if (data.status === 'approved') {
+            approvalRef.off();
+            db.ref(`users/${phone}/devices/${deviceId}`).set({
+                registeredAt: data.timestamp || new Date().toLocaleString('ar-YE'),
+                lastActive: new Date().toLocaleString('ar-YE'),
+                status: 'active'
+            });
+            approvalRef.remove();
+            
+            document.getElementById('loginMsg2').innerHTML = '✅ تمت الموافقة على جهازك، جاري الدخول...';
+            document.getElementById('loginMsg2').style.color = '#2ed573';
+            
+            setTimeout(() => {
+                completeLogin(phone, deviceId);
+            }, 1000);
+            
+        } else if (data.status === 'rejected') {
+            approvalRef.off();
+            document.getElementById('loginMsg2').innerHTML = '❌ تم رفض الجهاز من قبل المشرف.';
+            document.getElementById('loginMsg2').style.color = '#ff4757';
+        }
+    });
+}
+
+// ==========================================================================
+// 10. إكمال عملية الدخول - حفظ الجلسة بشكل دائم
+// ==========================================================================
+function completeLogin(phone, deviceId) {
+    const member = MEMBERS[phone];
+    
+    currentUser = {
+        phone: phone,
+        name: member.name,
+        role: member.role,
+        deviceId: deviceId,
+        loginTime: new Date().toLocaleString('ar-YE'),
+        isLoggedIn: true // علامة إضافية للتأكيد
+    };
+    
+    // حفظ الجلسة في localStorage بشكل دائم
+    localStorage.setItem('mecha_user_session', JSON.stringify(currentUser));
+    localStorage.setItem('mecha_logged_in', 'true'); // علامة إضافية
+    
+    // تحديث نشاط الجهاز
+    if (navigator.onLine) {
+        db.ref(`users/${phone}/devices/${deviceId}`).update({
+            lastActive: new Date().toLocaleString('ar-YE')
+        });
+        logUserActivity(phone, deviceId, 'login');
+    }
+    
+    // تشغيل التطبيق مباشرة
+    launchAppDirectly();
+}
+
+// ==========================================================================
+// 11. التحقق من الجلسة في الخلفية (اختياري، غير مانع للدخول)
+// ==========================================================================
+async function verifyDeviceSessionInBackground(user) {
+    try {
+        const snap = await db.ref(`users/${user.phone}/devices/${user.deviceId}`).once('value');
+        const deviceData = snap.val();
+        
+        if (!deviceData || deviceData.status === 'suspended') {
+            // إذا تم تعليق الجهاز، نقوم بتسجيل الخروج
+            console.log('⚠️ الجهاز تم تعليقه، تسجيل الخروج...');
+            localStorage.removeItem('mecha_user_session');
+            localStorage.removeItem('mecha_logged_in');
+            showLoginScreen();
             return;
         }
-
-        // أول جهاز لهذا المستخدم - تسجيل مباشر
-        registerNewDevice(phone, deviceId);
-        loginUser(phone);
-    }).catch(() => {
-        // في حال عدم الاتصال - التحقق من localStorage
-        const storedDevices = localStorage.getItem(`devices_${phone}`);
-        if (storedDevices) {
-            const devices = JSON.parse(storedDevices);
-            if (devices[deviceId]) {
-                loginUser(phone);
-                return;
-            }
-        }
-        // طلب موافقة في وضع عدم الاتصال
-        document.getElementById('phoneStatus').textContent = 
-            '⚠️ لا يوجد اتصال بالإنترنت، يرجى الاتصال للتحقق من الجهاز';
-        document.getElementById('phoneStatus').style.color = 'var(--error-color)';
-    });
-}
-
-// ==========================================================================
-// 6. الخطوة 2: نظام المصادقة عبر واتساب
-// ==========================================================================
-document.getElementById('btnSendWhatsApp').addEventListener('click', () => {
-    const phone = currentPhoneForVerification;
-    if (!phone) {
-        alert('⚠️ يرجى إدخال رقم الهاتف أولاً');
-        return;
-    }
-
-    // جلب اسم المستخدم
-    db.ref(`users/${phone}/name`).once('value').then(nameSnap => {
-        const userName = nameSnap.val() || 'مستخدم جديد';
         
-        // إنشاء رمز تحقق عشوائي
-        verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // تشفير الرمز مع رقم الهاتف
-        const plainText = `${phone}\n${verificationCode}\nطلب رمز دخول للمنظومة`;
-        const encryptedData = btoa(unescape(encodeURIComponent(plainText)));
-        
-        // فتح محادثة واتساب مع المشرف
-        const whatsappUrl = `https://wa.me/967${ADMIN_PHONE}?text=${encodeURIComponent(
-            `🔐 طلب رمز دخول للمنظومة الهندسية\n\n` +
-            `📱 رقم الهاتف: ${phone}\n` +
-            `👤 اسم المستخدم: ${userName}\n` +
-            `🖥️ معرف الجهاز: ${getDeviceId()}\n\n` +
-            `🔑 رمز التحقق المشفر:\n${encryptedData}\n\n` +
-            `📌 الرمز الصحيح هو: ${verificationCode}\n` +
-            `⚠️ يرجى إرسال هذا الرمز للمستخدم لإكمال تسجيل الدخول`
-        )}`;
-        
-        window.open(whatsappUrl, '_blank');
-        
-        document.getElementById('verifyStatus').textContent = 
-            '📤 تم إرسال الطلب إلى المشرف عبر واتساب';
-        document.getElementById('verifyStatus').style.color = 'var(--gold-secondary)';
-    });
-});
-
-// تأكيد رمز التحقق وتسجيل الدخول
-document.getElementById('btnVerifyCode').addEventListener('click', () => {
-    const userInput = document.getElementById('verifyCodeInput').value.trim();
-    const statusEl = document.getElementById('verifyStatus');
-
-    if (!verificationCode) {
-        statusEl.textContent = '⚠️ يرجى الضغط على "إرسال طلب التحقق" أولاً';
-        statusEl.style.color = 'var(--error-color)';
-        return;
-    }
-
-    if (!userInput) {
-        statusEl.textContent = '⚠️ يرجى إدخال رمز التحقق';
-        statusEl.style.color = 'var(--error-color)';
-        return;
-    }
-
-    if (userInput === verificationCode) {
-        // رمز صحيح - تسجيل المستخدم الجديد أو السماح بالدخول
-        const phone = currentPhoneForVerification;
-        
-        // التحقق من وجود المستخدم في Firebase
-        db.ref(`users/${phone}`).once('value').then(snapshot => {
-            if (!snapshot.exists()) {
-                // مستخدم جديد - تسجيله
-                const userName = prompt('👤 يرجى إدخال اسمك الكامل:');
-                if (userName && userName.trim()) {
-                    db.ref(`users/${phone}`).set({
-                        name: userName.trim(),
-                        registeredAt: new Date().toLocaleString('ar-YE'),
-                        role: 'member',
-                        isBaseMember: false
-                    });
-                } else {
-                    statusEl.textContent = '⚠️ يرجى إدخال اسم صحيح';
-                    statusEl.style.color = 'var(--error-color)';
-                    return;
-                }
-            }
-            
-            // تسجيل الجهاز والدخول
-            registerNewDevice(phone, getDeviceId());
-            loginUser(phone);
+        // تحديث وقت النشاط
+        db.ref(`users/${user.phone}/devices/${user.deviceId}`).update({
+            lastActive: new Date().toLocaleString('ar-YE')
         });
-    } else {
-        statusEl.textContent = '❌ رمز التحقق غير صحيح!';
-        statusEl.style.color = 'var(--error-color)';
-    }
-});
-
-// ==========================================================================
-// 7. تسجيل الأجهزة
-// ==========================================================================
-function registerNewDevice(phone, deviceId) {
-    const deviceInfo = {
-        deviceId: deviceId,
-        registeredAt: new Date().toLocaleString('ar-YE'),
-        userAgent: navigator.userAgent.slice(0, 50),
-        lastLogin: new Date().toLocaleString('ar-YE')
-    };
-
-    // حفظ في Firebase
-    db.ref(`users_devices/${phone}/${deviceId}`).set(deviceInfo);
-    
-    // حفظ في localStorage كنسخة احتياطية
-    const stored = localStorage.getItem(`devices_${phone}`) || '{}';
-    const devices = JSON.parse(stored);
-    devices[deviceId] = deviceInfo;
-    localStorage.setItem(`devices_${phone}`, JSON.stringify(devices));
-}
-
-function logDeviceAccess(phone, deviceId, type) {
-    const accessLog = {
-        deviceId: deviceId,
-        accessTime: new Date().toLocaleString('ar-YE'),
-        type: type,
-        userAgent: navigator.userAgent.slice(0, 50)
-    };
-
-    db.ref(`access_logs/${phone}`).push(accessLog);
-    
-    // جلب اسم المستخدم للإشعار
-    db.ref(`users/${phone}/name`).once('value').then(nameSnap => {
-        const userName = nameSnap.val() || phone;
         
-        // إشعار للمشرف
-        sendAdminNotification({
-            title: '🔄 تسجيل دخول متكرر',
-            message: `المهندس ${userName} قام بتسجيل الدخول من جهازه المسجل (${deviceId}) للمرة الثانية`,
-            path: 'users',
-            timestamp: new Date().toLocaleString('ar-YE')
-        });
-    });
-}
-
-// ==========================================================================
-// 8. طلب موافقة جهاز جديد
-// ==========================================================================
-function requestDeviceApproval(phone, deviceId, userName) {
-    // حفظ طلب الموافقة في Firebase
-    const approvalRequest = {
-        phone: phone,
-        deviceId: deviceId,
-        userName: userName,
-        requestedAt: new Date().toLocaleString('ar-YE'),
-        status: 'pending',
-        userAgent: navigator.userAgent.slice(0, 50)
-    };
-
-    db.ref(`pending_approvals/${phone}`).set(approvalRequest);
-
-    // إشعار للمشرف
-    sendAdminNotification({
-        title: '⚠️ طلب موافقة جهاز جديد',
-        message: `المهندس ${userName} يريد تسجيل جهاز جديد (${deviceId})`,
-        path: 'approval',
-        timestamp: new Date().toLocaleString('ar-YE')
-    });
-
-    // حفظ بيانات الطلب مؤقتاً
-    pendingApprovalData = approvalRequest;
-
-    // عرض رسالة للمستخدم
-    document.getElementById('phoneStatus').textContent = 
-        '📱 تم إرسال طلب موافقة للمشرف. يرجى الانتظار...';
-    document.getElementById('phoneStatus').style.color = 'var(--gold-secondary)';
-    
-    // فتح نافذة الطلب للمشرف إذا كان هو المستخدم الحالي
-    if (localStorage.getItem('mecha_user_session')) {
-        const current = JSON.parse(localStorage.getItem('mecha_user_session'));
-        if (current.phone === ADMIN_PHONE) {
-            openApprovalModal(approvalRequest);
-        }
+        logUserActivity(user.phone, user.deviceId, 'session_restore');
+        
+    } catch (e) {
+        console.log('⚠️ تعذر التحقق من الجلسة في الخلفية:', e);
+        // لا نقوم بأي إجراء، المستخدم ما زال داخل التطبيق
     }
 }
 
 // ==========================================================================
-// 9. الموافقة على جهاز جديد (للمشرف)
+// 12. تشغيل الواجهة الرئيسية - تظهر دائماً بدون شاشة دخول
 // ==========================================================================
-function openApprovalModal(data) {
-    const modal = document.getElementById('approvalModal');
-    const details = document.getElementById('approvalDetails');
-    
-    details.innerHTML = `
-        <div style="background:rgba(212,175,55,0.05); padding:12px; border-radius:12px;">
-            <p><strong>👤 المستخدم:</strong> ${data.userName}</p>
-            <p><strong>📱 رقم الهاتف:</strong> ${data.phone}</p>
-            <p><strong>🖥️ معرف الجهاز:</strong> <code style="background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:4px; font-size:11px;">${data.deviceId}</code></p>
-            <p><strong>⏰ وقت الطلب:</strong> ${data.requestedAt}</p>
-            <p><strong>🌐 المتصفح:</strong> ${data.userAgent}</p>
-        </div>
-    `;
-    
-    modal.style.display = 'flex';
-}
-
-// موافقة على جهاز جديد
-document.getElementById('btnApproveDevice').addEventListener('click', () => {
-    if (!pendingApprovalData) return;
-    const phone = pendingApprovalData.phone;
-    const deviceId = pendingApprovalData.deviceId;
-    
-    // تسجيل الجهاز الجديد
-    registerNewDevice(phone, deviceId);
-    
-    // حذف طلب الموافقة
-    db.ref(`pending_approvals/${phone}`).remove();
-    
-    // إشعار للمشرف
-    db.ref(`users/${phone}/name`).once('value').then(nameSnap => {
-        const userName = nameSnap.val() || phone;
-        sendAdminNotification({
-            title: '✅ تمت الموافقة على جهاز جديد',
-            message: `تمت الموافقة على جهاز المهندس ${userName}`,
-            path: 'users',
-            timestamp: new Date().toLocaleString('ar-YE')
-        });
-    });
-    
-    closeModal('approvalModal');
-    alert('✅ تمت الموافقة على الجهاز الجديد');
-    pendingApprovalData = null;
-});
-
-// رفض جهاز جديد
-document.getElementById('btnRejectDevice').addEventListener('click', () => {
-    if (!pendingApprovalData) return;
-    const phone = pendingApprovalData.phone;
-    
-    if (!confirm('هل أنت متأكد من رفض هذا الجهاز؟')) return;
-    
-    db.ref(`pending_approvals/${phone}`).remove();
-    closeModal('approvalModal');
-    alert('❌ تم رفض الجهاز الجديد');
-    pendingApprovalData = null;
-});
-
-// ==========================================================================
-// 10. تسجيل الدخول وتشغيل التطبيق
-// ==========================================================================
-function loginUser(phone) {
-    // جلب اسم المستخدم من Firebase
-    db.ref(`users/${phone}/name`).once('value').then(snapshot => {
-        const userName = snapshot.val() || phone;
-        const userRole = phone === ADMIN_PHONE ? 'admin' : 'member';
-
-        currentUser = {
-            phone: phone,
-            name: userName,
-            role: userRole,
-            loginTime: new Date().toLocaleString('ar-YE'),
-            deviceId: getDeviceId()
-        };
-
-        localStorage.setItem('mecha_user_session', JSON.stringify(currentUser));
-        launchAppDirectly();
-    }).catch(() => {
-        // في حالة عدم الاتصال، استخدم الاسم من الجلسة المحفوظة
-        const saved = localStorage.getItem('mecha_user_session');
-        if (saved) {
-            const user = JSON.parse(saved);
-            currentUser = user;
-            launchAppDirectly();
-        }
-    });
-}
-
 function launchAppDirectly() {
+    // إخفاء شاشة الدخول بشكل قاطع
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('appContent').style.display = 'flex';
     
     const isAdmin = (currentUser.role === 'admin' || currentUser.phone === ADMIN_PHONE);
-    
+
+    // تحديث معلومات المستخدم في الترويسة
     document.getElementById('userNameDisplay').innerText = `مرحباً المهندس ${currentUser.name}`;
     document.getElementById('userRoleDisplay').innerText = isAdmin ? 'مدير النظام' : 'عضو معتمد';
+    document.getElementById('deviceIdDisplay').innerText = `📱 المعرف: ${currentUser.deviceId || 'غير معروف'}`;
 
-    // إظهار/إخفاء أزرار المشرف
+    // إظهار/إخفاء الأزرار حسب الصلاحيات
     const adminBtn = document.getElementById('btnAdminAddBanner');
-    if (adminBtn) adminBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    if (adminBtn) {
+        adminBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    }
 
     const usersDataCard = document.getElementById('btnUsersData');
-    if (usersDataCard) usersDataCard.style.display = isAdmin ? 'flex' : 'none';
+    if (usersDataCard) {
+        usersDataCard.style.display = isAdmin ? 'flex' : 'none';
+    }
 
+    const studyBtn = document.getElementById('btnStudyMaterials');
+    if (studyBtn) {
+        studyBtn.style.display = 'flex';
+    }
+
+    // تحديث حالة الشبكة
     updateNetworkStatus();
+    
+    // تحميل البيانات
     loadBannerLocallyOrOnline(false);
     loadNotifications();
     
-    // إشعار للمشرف بدخول عضو (إذا كان العضو وليس مشرف)
-    if (!isAdmin && currentUser.phone !== ADMIN_PHONE) {
+    if (isAdmin) {
+        loadPendingApprovals();
+    }
+}
+
+// ==========================================================================
+// 13. تسجيل نشاط المستخدمين
+// ==========================================================================
+function logUserActivity(phone, deviceId, action) {
+    const member = MEMBERS[phone];
+    const activityLog = {
+        phone: phone,
+        memberName: member ? member.name : 'غير معروف',
+        deviceId: deviceId,
+        action: action,
+        timestamp: new Date().toLocaleString('ar-YE'),
+        userAgent: navigator.userAgent.slice(0, 50)
+    };
+    
+    if (navigator.onLine) {
+        db.ref(`activity_logs/${phone}/${Date.now()}`).set(activityLog);
+    }
+    
+    if (phone !== ADMIN_PHONE) {
+        let actionText = '';
+        switch(action) {
+            case 'first_login': actionText = '🔓 دخل لأول مرة'; break;
+            case 'login': actionText = '🔓 قام بتسجيل الدخول'; break;
+            case 'session_restore': actionText = '🔄 استعاد الجلسة'; break;
+            default: actionText = '📱 نشاط جديد';
+        }
+        
         sendAdminNotification({
-            title: '👤 تسجيل دخول جديد',
-            message: `المهندس ${currentUser.name} قام بتسجيل الدخول إلى التطبيق من الجهاز (${currentUser.deviceId})`,
-            path: 'users',
-            timestamp: new Date().toLocaleString('ar-YE')
+            type: 'user_activity',
+            title: `👤 ${actionText}`,
+            message: `المهندس ${member ? member.name : 'غير معروف'}`,
+            data: activityLog
         });
     }
 }
 
 // ==========================================================================
-// 11. عرض بيانات الأعضاء والأجهزة (للمشرف)
-// ==========================================================================
-async function loadUsersDevicesData() {
-    const listEl = document.getElementById('usersDevicesList');
-    listEl.innerHTML = 'جاري تحليل الأجهزة والنشاط...';
-
-    if (!navigator.onLine) {
-        listEl.innerHTML = '⚠️ يتطلب اتصال بالإنترنت لجلب بيانات الأجهزة الحديثة.';
-        return;
-    }
-
-    try {
-        // جلب بيانات المستخدمين
-        const usersSnap = await db.ref('users').once('value');
-        const usersData = usersSnap.val() || {};
-        
-        // جلب الأجهزة المسجلة
-        const devicesSnap = await db.ref('users_devices').once('value');
-        const devicesData = devicesSnap.val() || {};
-        
-        // جلب طلبات الموافقة المعلقة
-        const pendingSnap = await db.ref('pending_approvals').once('value');
-        const pendingData = pendingSnap.val() || {};
-
-        let html = '';
-        
-        // عرض المشرف أولاً
-        if (usersData[ADMIN_PHONE]) {
-            html += generateUserCard(ADMIN_PHONE, usersData[ADMIN_PHONE], devicesData, pendingData);
-        }
-        
-        // عرض بقية الأعضاء
-        Object.entries(usersData).forEach(([phone, user]) => {
-            if (phone !== ADMIN_PHONE) {
-                html += generateUserCard(phone, user, devicesData, pendingData);
-            }
-        });
-
-        if (!html) {
-            html = '<p style="color:var(--text-dim); text-align:center;">لا يوجد أعضاء مسجلين حالياً</p>';
-        }
-
-        listEl.innerHTML = html;
-    } catch (e) {
-        listEl.innerHTML = '❌ تعذر جلب البيانات من السيرفر.';
-        console.error(e);
-    }
-}
-
-function generateUserCard(phone, user, devicesData, pendingData) {
-    const userDevices = devicesData[phone] || {};
-    const deviceKeys = Object.keys(userDevices);
-    const deviceCount = deviceKeys.length;
-    const userName = user.name || phone;
-    const userRole = phone === ADMIN_PHONE ? 'admin' : 'member';
-    const isBaseMember = user.isBaseMember || false;
-    
-    const isPending = pendingData[phone] ? true : false;
-    
-    let warning = '';
-    if (deviceCount > 1) {
-        warning = `
-            <div class="device-warning-card" style="
-                background:rgba(255,71,87,0.15); 
-                border:1px solid #ff4757; 
-                color:#ff4757; 
-                padding:8px; 
-                border-radius:8px; 
-                margin-top:6px; 
-                font-size:11px;
-            ">
-                ⚠️ هذا العضو مسجل من (${deviceCount}) أجهزة مختلفة!
-                <br>
-                <span style="font-size:10px; color:var(--text-dim);">
-                    ${deviceKeys.map(id => `🖥️ ${id}`).join(' | ')}
-                </span>
-            </div>
-        `;
-    }
-
-    let pendingStatus = '';
-    if (isPending) {
-        pendingStatus = `
-            <div style="
-                background:rgba(212,175,55,0.15); 
-                border:1px solid var(--gold-primary); 
-                color:var(--gold-secondary); 
-                padding:6px 12px; 
-                border-radius:8px; 
-                font-size:11px;
-                margin-top:6px;
-            ">
-                ⏳ في انتظار الموافقة على جهاز جديد
-            </div>
-        `;
-    }
-
-    let baseMemberTag = '';
-    if (isBaseMember) {
-        baseMemberTag = `<span style="font-size:9px; color:var(--gold); background:rgba(212,175,55,0.1); padding:2px 8px; border-radius:10px;">⭐ عضو أساسي</span>`;
-    }
-
-    return `
-        <div style="
-            background:rgba(255,255,255,0.05); 
-            padding:12px; 
-            margin-bottom:10px; 
-            border-radius:12px; 
-            border:1px solid rgba(255,255,255,0.1);
-        ">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                <div>
-                    <b>👤 المهندس ${userName}</b>
-                    ${baseMemberTag}
-                </div>
-                <span style="font-size:11px; color:${userRole === 'admin' ? 'var(--gold)' : 'var(--text-dim)'};">
-                    ${userRole === 'admin' ? '👑 مدير' : '👤 عضو'}
-                </span>
-            </div>
-            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">
-                📱 رقم الهاتف: ${phone}
-            </div>
-            <div style="font-size:11px; color:var(--text-dim);">
-                🖥️ عدد الأجهزة: ${deviceCount}
-            </div>
-            <div style="font-size:10px; color:var(--text-dim); margin-top:2px;">
-                📅 تاريخ التسجيل: ${user.registeredAt || 'غير محدد'}
-            </div>
-            ${warning}
-            ${pendingStatus}
-        </div>
-    `;
-}
-
-// ==========================================================================
-// 12. إرسال الإشعارات للمشرف
+// 14. إرسال إشعارات للمشرف
 // ==========================================================================
 function sendAdminNotification(notif) {
-    // حفظ في Firebase
-    db.ref(`admin_notifications/${Date.now()}`).set({
+    const adminNotif = {
         ...notif,
         read: false,
-        id: Date.now()
-    });
-
-    // حفظ محلياً
-    const saved = localStorage.getItem('admin_notifications');
-    let notifications = saved ? JSON.parse(saved) : [];
-    notifications.unshift({...notif, read: false, id: Date.now()});
-    if (notifications.length > 100) notifications = notifications.slice(0, 100);
-    localStorage.setItem('admin_notifications', JSON.stringify(notifications));
+        timestamp: new Date().toLocaleString('ar-YE')
+    };
     
-    // تحديث شارة الإشعارات إذا كان المستخدم مشرفاً
-    const user = getCurrentUser();
-    if (user && user.phone === ADMIN_PHONE) {
+    if (navigator.onLine) {
+        db.ref(`admin_notifications/${Date.now()}`).set(adminNotif);
+    }
+    
+    if (currentUser && currentUser.phone === ADMIN_PHONE) {
+        notificationsData.unshift(adminNotif);
         updateNotificationBadge();
     }
 }
 
 // ==========================================================================
-// 13. عرض الإشعارات للمشرف
+// 15. إدارة الإشعارات
 // ==========================================================================
-function showApprovalToast(data) {
-    // إنشاء إشعار منبثق للمشرف
-    const toast = document.createElement('div');
-    toast.style.cssText = `
+async function loadNotifications() {
+    const savedNotifications = localStorage.getItem('cached_notifications');
+    if (savedNotifications) {
+        try {
+            notificationsData = JSON.parse(savedNotifications);
+            updateNotificationBadge();
+        } catch (e) {}
+    }
+
+    if (navigator.onLine && currentUser && currentUser.phone === ADMIN_PHONE) {
+        try {
+            const snap = await db.ref('admin_notifications').orderByChild('timestamp').limitToLast(50).once('value');
+            const data = snap.val();
+            if (data) {
+                notificationsData = Object.values(data).reverse();
+                localStorage.setItem('cached_notifications', JSON.stringify(notificationsData));
+                updateNotificationBadge();
+            }
+        } catch (e) {
+            console.log('تعذر جلب الإشعارات من السيرفر.');
+        }
+    }
+}
+
+function updateNotificationBadge() {
+    const unread = notificationsData.filter(n => !n.read).length;
+    unreadCount = unread;
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        if (unread > 0) {
+            badge.style.display = 'flex';
+            badge.innerText = unread > 99 ? '99+' : unread;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// ==========================================================================
+// 16. تحميل طلبات الموافقة المعلقة (للمشرف)
+// ==========================================================================
+function loadPendingApprovals() {
+    if (!currentUser || currentUser.phone !== ADMIN_PHONE) return;
+    
+    db.ref('pending_approvals').on('value', (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        
+        const pendingCount = Object.keys(data).filter(key => data[key].status === 'pending').length;
+        if (pendingCount > 0) {
+            showApprovalNotification(pendingCount);
+        }
+    });
+}
+
+function showApprovalNotification(count) {
+    const notifDiv = document.createElement('div');
+    notifDiv.className = 'notification-toast';
+    notifDiv.style.cssText = `
         position: fixed;
         bottom: 20px;
         right: 20px;
@@ -699,33 +571,22 @@ function showApprovalToast(data) {
         direction: rtl;
     `;
     
-    toast.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-                <div style="color:var(--gold-secondary); font-weight:700;">⚠️ طلب موافقة جهاز جديد</div>
-                <div style="color:var(--text-muted); font-size:12px; margin-top:4px;">
-                    المهندس ${data.userName} يريد تسجيل جهاز جديد
-                </div>
-                <div style="display:flex; gap:8px; margin-top:10px;">
-                    <button onclick="approveDeviceFromToast('${data.phone}')" style="
-                        background: var(--gold-grad);
-                        color: #060d18;
-                        border: none;
-                        padding: 6px 16px;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        font-weight: 700;
-                    ">✅ موافقة</button>
-                    <button onclick="rejectDeviceFromToast('${data.phone}')" style="
-                        background: var(--danger-color);
-                        color: #fff;
-                        border: none;
-                        padding: 6px 16px;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        font-weight: 700;
-                    ">❌ رفض</button>
-                </div>
+    notifDiv.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div style="flex:1;">
+                <div style="color:var(--gold-secondary); font-weight:700; font-size:14px;">🔐 طلبات موافقة معلقة</div>
+                <div style="color:var(--text-muted); font-size:12px; margin-top:4px;">لديك ${count} طلب(طلبات) موافقة على أجهزة جديدة</div>
+                <button onclick="openModal('usersDataModal'); this.parentElement.parentElement.parentElement.remove();" style="
+                    background: var(--gold-grad);
+                    color: #060d18;
+                    border: none;
+                    padding: 6px 14px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 700;
+                    margin-top: 8px;
+                ">👀 عرض الطلبات</button>
             </div>
             <button onclick="this.parentElement.parentElement.remove()" style="
                 background: none;
@@ -733,195 +594,170 @@ function showApprovalToast(data) {
                 color: var(--text-dim);
                 font-size: 16px;
                 cursor: pointer;
+                padding: 4px 8px;
             ">✕</button>
         </div>
     `;
     
-    document.body.appendChild(toast);
+    document.body.appendChild(notifDiv);
     
     setTimeout(() => {
-        if (toast.parentElement) {
-            toast.style.animation = 'slideDown 0.5s ease';
-            setTimeout(() => toast.remove(), 500);
+        if (notifDiv.parentElement) {
+            notifDiv.style.animation = 'slideDown 0.5s ease';
+            setTimeout(() => notifDiv.remove(), 500);
         }
     }, 30000);
 }
 
-// دوال الموافقة من الإشعار المنبثق
-window.approveDeviceFromToast = function(phone) {
-    db.ref(`pending_approvals/${phone}`).once('value').then(snapshot => {
-        const data = snapshot.val();
-        if (data) {
-            pendingApprovalData = data;
-            registerNewDevice(phone, data.deviceId);
-            db.ref(`pending_approvals/${phone}`).remove();
-            
-            db.ref(`users/${phone}/name`).once('value').then(nameSnap => {
-                const userName = nameSnap.val() || phone;
-                sendAdminNotification({
-                    title: '✅ تمت الموافقة على جهاز جديد',
-                    message: `تمت الموافقة على جهاز المهندس ${userName}`,
-                    path: 'users',
-                    timestamp: new Date().toLocaleString('ar-YE')
-                });
-            });
-            
-            alert('✅ تمت الموافقة على الجهاز الجديد');
-            // إزالة جميع الإشعارات المنبثقة
-            document.querySelectorAll('[style*="position: fixed"][style*="z-index: 9999"]').forEach(el => el.remove());
-        }
-    });
-};
-
-window.rejectDeviceFromToast = function(phone) {
-    if (!confirm('هل أنت متأكد من رفض هذا الجهاز؟')) return;
-    db.ref(`pending_approvals/${phone}`).remove();
-    alert('❌ تم رفض الجهاز الجديد');
-    document.querySelectorAll('[style*="position: fixed"][style*="z-index: 9999"]').forEach(el => el.remove());
-};
-
 // ==========================================================================
-// 14. إدارة الإشعارات
+// 17. عرض بيانات الأعضاء ومراقبة الأجهزة
 // ==========================================================================
-let notificationsData = [];
-let unreadCount = 0;
+async function loadUsersDevicesData() {
+    const listEl = document.getElementById('usersDevicesList');
+    listEl.innerHTML = 'جاري تحليل الأجهزة والنشاط...';
 
-async function loadNotifications() {
-    // تحميل إشعارات المشرف إذا كان المستخدم مشرفاً
-    const user = getCurrentUser();
-    if (!user || user.phone !== ADMIN_PHONE) return;
-
-    const saved = localStorage.getItem('admin_notifications');
-    if (saved) {
-        try {
-            notificationsData = JSON.parse(saved);
-            updateNotificationBadge();
-        } catch (e) {}
-    }
-
-    if (navigator.onLine) {
-        try {
-            const snap = await db.ref('admin_notifications').orderByChild('timestamp').limitToLast(50).once('value');
-            const data = snap.val();
-            if (data) {
-                notificationsData = Object.values(data).reverse();
-                localStorage.setItem('admin_notifications', JSON.stringify(notificationsData));
-                updateNotificationBadge();
-            }
-        } catch (e) {
-            console.log('تعذر جلب الإشعارات من السيرفر.');
-        }
-    }
-}
-
-function updateNotificationBadge() {
-    const unread = notificationsData.filter(n => !n.read).length;
-    unreadCount = unread;
-    const badge = document.getElementById('notificationBadge');
-    if (badge) {
-        badge.style.display = unread > 0 ? 'flex' : 'none';
-        badge.innerText = unread > 99 ? '99+' : unread;
-    }
-}
-
-function openNotificationsModal() {
-    let modal = document.getElementById('notificationsModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'notificationsModal';
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="glass-card modal-box large-modal" style="max-width:500px; max-height:80vh; display:flex; flex-direction:column;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(212,175,55,0.1); padding-bottom:12px;">
-                    <h3 style="color:var(--gold-secondary); font-size:17px; margin:0;">🔔 مركز الإشعارات</h3>
-                    <button onclick="closeModal('notificationsModal')" style="
-                        background:none;
-                        border:none;
-                        color:var(--text-dim);
-                        font-size:20px;
-                        cursor:pointer;
-                    ">✕</button>
-                </div>
-                <div id="notificationsList" style="flex:1; overflow-y:auto; padding:10px 0;">
-                    <p style="text-align:center; color:var(--text-dim);">جاري تحميل الإشعارات...</p>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-
-    modal.style.display = 'flex';
-    renderNotificationsList();
-}
-
-function renderNotificationsList() {
-    const list = document.getElementById('notificationsList');
-    if (!list) return;
-
-    if (notificationsData.length === 0) {
-        list.innerHTML = `
-            <div style="text-align:center; padding:40px 20px; color:var(--text-dim);">
-                <div style="font-size:48px; margin-bottom:12px;">📭</div>
-                <p>لا توجد إشعارات حالياً.</p>
-            </div>
-        `;
+    if (!navigator.onLine) {
+        listEl.innerHTML = '⚠️ يتطلب اتصال بالإنترنت لجلب بيانات الأجهزة الحديثة.';
         return;
     }
 
-    let html = '';
-    notificationsData.forEach((notif, index) => {
-        const isRead = notif.read || false;
-        html += `
-            <div style="
-                background: ${isRead ? 'rgba(255,255,255,0.02)' : 'rgba(212,175,55,0.05)'};
-                border: 1px solid ${isRead ? 'rgba(255,255,255,0.03)' : 'rgba(212,175,55,0.1)'};
-                border-radius: 12px;
-                padding: 14px 16px;
-                margin-bottom: 10px;
-            ">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-                    <div>
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                            <span style="color:var(--gold-secondary); font-weight:600; font-size:14px;">${notif.title}</span>
-                            ${!isRead ? `<span style="
-                                background:#ff4757;
-                                color:#fff;
-                                font-size:8px;
-                                padding:2px 8px;
-                                border-radius:10px;
-                                font-weight:700;
-                            ">جديد</span>` : ''}
+    try {
+        const usersSnap = await db.ref('users').once('value');
+        const usersData = usersSnap.val() || {};
+        
+        const pendingSnap = await db.ref('pending_approvals').once('value');
+        const pendingData = pendingSnap.val() || {};
+
+        let html = '';
+        
+        const pendingRequests = Object.entries(pendingData).filter(([key, val]) => val.status === 'pending');
+        if (pendingRequests.length > 0) {
+            html += `
+                <div style="background:rgba(255,165,0,0.1); border:1px solid #ffa500; padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <h4 style="color:#ffa500; margin:0 0 12px 0;">⏳ طلبات موافقة معلقة (${pendingRequests.length})</h4>
+            `;
+            
+            pendingRequests.forEach(([key, val]) => {
+                html += `
+                    <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <b style="color:var(--gold-secondary);">👤 المهندس ${val.memberName}</b>
+                                <div style="font-size:11px; color:var(--text-dim);">📱 المعرف: ${val.deviceId}</div>
+                                <div style="font-size:10px; color:var(--text-dim);">⏰ ${val.timestamp}</div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button onclick="approveDevice('${key}', '${val.phone}', '${val.deviceId}')" style="
+                                    background:#2ed573;
+                                    color:#fff;
+                                    border:none;
+                                    padding:4px 12px;
+                                    border-radius:6px;
+                                    cursor:pointer;
+                                    font-size:11px;
+                                ">✅ موافقة</button>
+                                <button onclick="rejectDevice('${key}', '${val.phone}')" style="
+                                    background:#ff4757;
+                                    color:#fff;
+                                    border:none;
+                                    padding:4px 12px;
+                                    border-radius:6px;
+                                    cursor:pointer;
+                                    font-size:11px;
+                                ">❌ رفض</button>
+                            </div>
                         </div>
-                        <div style="color:var(--text-muted); font-size:12px; margin-top:4px; line-height:1.6;">${notif.message}</div>
-                        <div style="color:var(--text-dim); font-size:10px; margin-top:6px;">⏰ ${notif.timestamp}</div>
                     </div>
-                    <button onclick="markNotificationRead(${index})" style="
-                        background:none;
-                        border:none;
-                        color:var(--text-dim);
-                        cursor:pointer;
-                        font-size:12px;
-                        padding:4px;
-                    ">✓</button>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+
+        html += `<h4 style="color:var(--gold-secondary); margin:16px 0 12px 0;">👥 الأعضاء المسجلين</h4>`;
+        
+        Object.entries(MEMBERS).forEach(([phone, member]) => {
+            const userDevices = usersData[phone]?.devices || {};
+            const deviceKeys = Object.keys(userDevices);
+            const deviceCount = deviceKeys.length;
+
+            let warning = '';
+            if (deviceCount > 1) {
+                warning = `
+                    <div style="background:rgba(255,71,87,0.15); border:1px solid #ff4757; padding:8px; border-radius:8px; margin-top:6px; font-size:11px; color:#ff4757;">
+                        ⚠️ تنبيه أمني: هذا العضو مسجل من (${deviceCount}) أجهزة مختلفة!
+                    </div>
+                `;
+            }
+
+            let devicesList = '';
+            if (deviceCount > 0) {
+                devicesList = `
+                    <div style="font-size:10px; color:var(--text-dim); margin-top:6px;">
+                        <div style="font-weight:600; color:var(--text-muted);">الأجهزة:</div>
+                        ${deviceKeys.map(did => `
+                            <div style="display:flex; justify-content:space-between; padding:2px 4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <span>📱 ${did}</span>
+                                <span style="color:${userDevices[did].status === 'active' ? '#2ed573' : '#ff4757'};">${userDevices[did].status || 'نشط'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            html += `
+                <div style="background:rgba(255,255,255,0.03); padding:12px; margin-bottom:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b style="color:var(--text-light);">👤 المهندس ${member.name}</b>
+                        <span style="font-size:11px; color:var(--gold-secondary);">${member.role === 'admin' ? '👑 مدير' : 'عضو'}</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">📱 رقم الهاتف: ${phone}</div>
+                    <div style="font-size:11px; color:var(--text-dim);">💻 عدد الأجهزة المسجلة: ${deviceCount}</div>
+                    ${devicesList}
+                    ${warning}
                 </div>
-            </div>
-        `;
-    });
+            `;
+        });
 
-    list.innerHTML = html;
-}
-
-function markNotificationRead(index) {
-    if (notificationsData[index]) {
-        notificationsData[index].read = true;
-        localStorage.setItem('admin_notifications', JSON.stringify(notificationsData));
-        updateNotificationBadge();
-        renderNotificationsList();
+        listEl.innerHTML = html;
+    } catch (e) {
+        console.error('خطأ في تحميل بيانات الأعضاء:', e);
+        listEl.innerHTML = '❌ تعذر جلب البيانات من السيرفر.';
     }
 }
 
 // ==========================================================================
-// 15. دوال الإعلانات
+// 18. وظائف الموافقة على الأجهزة (للمشرف)
+// ==========================================================================
+function approveDevice(pendingKey, phone, deviceId) {
+    if (!confirm(`هل أنت متأكد من الموافقة على هذا الجهاز للمهندس ${MEMBERS[phone]?.name || phone}؟`)) return;
+    
+    db.ref(`pending_approvals/${pendingKey}`).update({ status: 'approved' });
+    db.ref(`users/${phone}/devices/${deviceId}`).set({
+        registeredAt: new Date().toLocaleString('ar-YE'),
+        lastActive: new Date().toLocaleString('ar-YE'),
+        status: 'active'
+    });
+    
+    setTimeout(() => {
+        db.ref(`pending_approvals/${pendingKey}`).remove();
+        loadUsersDevicesData();
+    }, 500);
+}
+
+function rejectDevice(pendingKey, phone) {
+    if (!confirm(`هل أنت متأكد من رفض هذا الجهاز للمهندس ${MEMBERS[phone]?.name || phone}؟`)) return;
+    
+    db.ref(`pending_approvals/${pendingKey}`).update({ status: 'rejected' });
+    
+    setTimeout(() => {
+        db.ref(`pending_approvals/${pendingKey}`).remove();
+        loadUsersDevicesData();
+    }, 500);
+}
+
+// ==========================================================================
+// 19. إدارة حاوية الإعلانات
 // ==========================================================================
 async function loadBannerLocallyOrOnline(forceFetch = false) {
     const localBanner = localStorage.getItem('cached_banner_data');
@@ -930,8 +766,7 @@ async function loadBannerLocallyOrOnline(forceFetch = false) {
         if (localBanner) {
             renderBanner(JSON.parse(localBanner));
         } else {
-            document.getElementById('bannerDisplayArea').innerHTML = 
-                '<div class="empty-banner">لا توجد إعلانات محفوظة محلياً.</div>';
+            document.getElementById('bannerDisplayArea').innerHTML = '<div class="empty-banner">لا توجد إعلانات محفوظة محلياً.</div>';
         }
         return;
     }
@@ -941,17 +776,11 @@ async function loadBannerLocallyOrOnline(forceFetch = false) {
         const onlineBanner = snap.val();
 
         if (onlineBanner) {
-            const currentLocalId = localBanner ? JSON.parse(localBanner).id : null;
-            if (forceFetch && currentLocalId === onlineBanner.id) {
-                alert('ℹ️ لا توجد إعلانات محدثة جديدة بعد.');
-            } else {
-                localStorage.setItem('cached_banner_data', JSON.stringify(onlineBanner));
-                renderBanner(onlineBanner);
-                if (forceFetch) alert('✅ تم تحديث الإعلان وحفظه محلياً بنجاح!');
-            }
+            localStorage.setItem('cached_banner_data', JSON.stringify(onlineBanner));
+            renderBanner(onlineBanner);
+            if (forceFetch) alert('✅ تم تحديث الإعلان وحفظه محلياً بنجاح!');
         } else {
-            document.getElementById('bannerDisplayArea').innerHTML = 
-                '<div class="empty-banner">لا توجد إعلانات حالياً.</div>';
+            document.getElementById('bannerDisplayArea').innerHTML = '<div class="empty-banner">لا توجد إعلانات حالياً.</div>';
         }
     } catch (e) {
         console.error("خطأ في جلب بيانات الإعلان:", e);
@@ -967,7 +796,9 @@ function renderBanner(data) {
     document.getElementById('bannerDisplayArea').innerHTML = html;
 }
 
-// نشر إعلان جديد (للمشرف)
+// ==========================================================================
+// 20. نشر إعلان جديد (للمشرف)
+// ==========================================================================
 document.getElementById('btnPublishBanner').addEventListener('click', async () => {
     const title = document.getElementById('bannerTitleInput').value.trim();
     const text = document.getElementById('bannerTextInput').value.trim();
@@ -1007,15 +838,174 @@ document.getElementById('btnPublishBanner').addEventListener('click', async () =
         document.getElementById('bannerImgInput').value = '';
         
         closeModal('addBannerModal');
-        alert('✅ تم حذف الإعلان القديم واستبداله بالإعلان الجديد للجميع بنجاح!');
+        alert('✅ تم نشر الإعلان الجديد بنجاح!');
     } catch (e) {
         alert('❌ حدث خطأ أثناء النشر، تأكد من اتصال النت.');
     }
 });
 
 // ==========================================================================
-// 16. دوال حالة الاتصال
+// 21. فتح نافذة الإشعارات
 // ==========================================================================
+function openNotificationsModal() {
+    let modal = document.getElementById('notificationsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'notificationsModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="glass-card modal-box large-modal" style="max-width:500px; max-height:80vh; display:flex; flex-direction:column;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(212,175,55,0.1); padding-bottom:12px;">
+                    <h3 style="color:var(--gold-secondary); font-size:17px; margin:0;">🔔 مركز الإشعارات</h3>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button onclick="markAllNotificationsRead()" style="
+                            background:rgba(212,175,55,0.1);
+                            border:1px solid rgba(212,175,55,0.15);
+                            color:var(--text-gold);
+                            padding:4px 12px;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-size:11px;
+                        ">تحديد الكل كمقروء</button>
+                        <button onclick="closeModal('notificationsModal')" style="
+                            background:none;
+                            border:none;
+                            color:var(--text-dim);
+                            font-size:20px;
+                            cursor:pointer;
+                        ">✕</button>
+                    </div>
+                </div>
+                <div id="notificationsList" style="flex:1; overflow-y:auto; padding:10px 0;">
+                    <p style="text-align:center; color:var(--text-dim);">جاري تحميل الإشعارات...</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.style.display = 'flex';
+    renderNotificationsList();
+}
+
+function renderNotificationsList() {
+    const list = document.getElementById('notificationsList');
+    if (!list) return;
+
+    if (notificationsData.length === 0) {
+        list.innerHTML = `
+            <div style="text-align:center; padding:40px 20px; color:var(--text-dim);">
+                <div style="font-size:48px; margin-bottom:12px;">📭</div>
+                <p>لا توجد إشعارات حالياً.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    notificationsData.forEach((notif, index) => {
+        const isRead = notif.read || false;
+        const icon = notif.type === 'device_approval' ? '🔐' : 
+                    notif.type === 'user_activity' ? '👤' : '📝';
+        
+        html += `
+            <div style="
+                background: ${isRead ? 'rgba(255,255,255,0.02)' : 'rgba(212,175,55,0.05)'};
+                border: 1px solid ${isRead ? 'rgba(255,255,255,0.03)' : 'rgba(212,175,55,0.1)'};
+                border-radius: 12px;
+                padding: 14px 16px;
+                margin-bottom: 10px;
+            ">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span style="font-size:18px;">${icon}</span>
+                            <span style="color:var(--gold-secondary); font-weight:600; font-size:14px;">${notif.title}</span>
+                            ${!isRead ? `<span style="
+                                background:#ff4757;
+                                color:#fff;
+                                font-size:8px;
+                                padding:2px 8px;
+                                border-radius:10px;
+                                font-weight:700;
+                            ">جديد</span>` : ''}
+                        </div>
+                        <div style="color:var(--text-muted); font-size:12px; margin-top:4px; line-height:1.6;">${notif.message}</div>
+                        ${notif.data ? `<div style="color:var(--text-dim); font-size:10px; margin-top:4px;">📱 ${notif.data.deviceId || ''}</div>` : ''}
+                        <div style="color:var(--text-dim); font-size:10px; margin-top:6px;">⏰ ${notif.timestamp}</div>
+                    </div>
+                    <button onclick="event.stopPropagation(); markNotificationRead(${index})" style="
+                        background:none;
+                        border:none;
+                        color:var(--text-dim);
+                        cursor:pointer;
+                        font-size:12px;
+                        padding:4px;
+                    " title="تحديد كمقروء">✓</button>
+                </div>
+            </div>
+        `;
+    });
+
+    list.innerHTML = html;
+}
+
+function markNotificationRead(index) {
+    if (notificationsData[index]) {
+        notificationsData[index].read = true;
+        localStorage.setItem('cached_notifications', JSON.stringify(notificationsData));
+        updateNotificationBadge();
+        renderNotificationsList();
+    }
+}
+
+function markAllNotificationsRead() {
+    notificationsData.forEach(n => n.read = true);
+    localStorage.setItem('cached_notifications', JSON.stringify(notificationsData));
+    updateNotificationBadge();
+    renderNotificationsList();
+}
+
+// ==========================================================================
+// 22. الأحداث والتنقلات
+// ==========================================================================
+function setupEvents() {
+    document.getElementById('btnRefreshData').addEventListener('click', () => loadBannerLocallyOrOnline(true));
+    document.getElementById('btnAdminAddBanner').addEventListener('click', () => openModal('addBannerModal'));
+    
+    document.getElementById('btnStudyMaterials').addEventListener('click', () => {
+        window.location.href = 'study-materials.html';
+    });
+
+    document.getElementById('btnNotifCenter').addEventListener('click', () => {
+        openNotificationsModal();
+        if (navigator.onLine) {
+            loadNotifications();
+        }
+    });
+
+    document.getElementById('btnUsersData').addEventListener('click', () => {
+        openModal('usersDataModal');
+        loadUsersDevicesData();
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', () => {
+        if (confirm('هل أنت متأكد من تسجيل الخروج؟ ستحتاج لإعادة التحقق.')) {
+            if (currentUser && currentUser.phone && currentUser.deviceId && navigator.onLine) {
+                db.ref(`users/${currentUser.phone}/devices/${currentUser.deviceId}`).update({
+                    lastActive: new Date().toLocaleString('ar-YE'),
+                    status: 'inactive'
+                });
+            }
+            localStorage.removeItem('mecha_user_session');
+            localStorage.removeItem('mecha_logged_in');
+            localStorage.removeItem('temp_auth_code');
+            currentUser = null;
+            showLoginScreen();
+        }
+    });
+}
+
 function updateNetworkStatus() {
     const badge = document.getElementById('netStatusBadge');
     if (!badge) return;
@@ -1031,82 +1021,22 @@ function updateNetworkStatus() {
 window.addEventListener('online', updateNetworkStatus);
 window.addEventListener('offline', updateNetworkStatus);
 
-// ==========================================================================
-// 17. الأحداث والتنقلات
-// ==========================================================================
-function setupEvents() {
-    // زر تحديث البيانات
-    document.getElementById('btnRefreshData').addEventListener('click', () => {
-        loadBannerLocallyOrOnline(true);
-    });
-    
-    // زر إدراج إعلان
-    document.getElementById('btnAdminAddBanner').addEventListener('click', () => {
-        openModal('addBannerModal');
-    });
-    
-    // زر المواد الدراسية
-    document.getElementById('btnStudyMaterials').addEventListener('click', () => {
-        window.location.href = 'study-materials.html';
-    });
-
-    // زر الإشعارات
-    document.getElementById('btnNotifCenter').addEventListener('click', () => {
-        openNotificationsModal();
-        if (navigator.onLine) loadNotifications();
-    });
-
-    // زر عرض بيانات الأعضاء
-    document.getElementById('btnUsersData').addEventListener('click', () => {
-        openModal('usersDataModal');
-        loadUsersDevicesData();
-    });
-
-    // زر تسجيل الخروج
-    document.getElementById('btnLogout').addEventListener('click', () => {
-        if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-            localStorage.removeItem('mecha_user_session');
-            location.reload();
-        }
-    });
-}
-
-// ==========================================================================
-// 18. دوال مساعدة
-// ==========================================================================
-function getCurrentUser() {
-    try {
-        const session = localStorage.getItem('mecha_user_session');
-        if (session) return JSON.parse(session);
-        return null;
-    } catch (e) {
-        return null;
-    }
-}
-
-function isAdminUser() {
-    const user = getCurrentUser();
-    return user && (user.role === 'admin' || user.phone === ADMIN_PHONE);
-}
-
-function openModal(id) {
+function openModal(id) { 
     const el = document.getElementById(id);
-    if (el) el.style.display = 'flex';
+    if (el) el.style.display = 'flex'; 
 }
 
-function closeModal(id) {
+function closeModal(id) { 
     const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    if (el) el.style.display = 'none'; 
 }
 
-// إغلاق النوافذ عند النقر خارجها
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal-overlay')) {
         e.target.style.display = 'none';
     }
 });
 
-// إغلاق النوافذ عند الضغط على ESC
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         document.querySelectorAll('.modal-overlay').forEach(el => {
@@ -1116,14 +1046,84 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ==========================================================================
-// 19. تصدير الدوال للاستخدام من صفحات أخرى
+// 23. دوال مساعدة
+// ==========================================================================
+function isAdminUser() {
+    const user = getCurrentUser();
+    return user && (user.role === 'admin' || user.phone === ADMIN_PHONE);
+}
+
+function getCurrentUser() {
+    try {
+        const session = localStorage.getItem('mecha_user_session');
+        if (session) {
+            return JSON.parse(session);
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// ==========================================================================
+// 24. إضافة شارة الإشعارات
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const notifBtn = document.getElementById('btnNotifCenter');
+    if (notifBtn) {
+        const badge = document.createElement('span');
+        badge.id = 'notificationBadge';
+        badge.style.cssText = `
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ff4757;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #0a192f;
+        `;
+        notifBtn.style.position = 'relative';
+        notifBtn.appendChild(badge);
+    }
+
+    if (!document.getElementById('notificationStyles')) {
+        const style = document.createElement('style');
+        style.id = 'notificationStyles';
+        style.textContent = `
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(30px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes slideDown {
+                from { opacity: 1; transform: translateY(0); }
+                to { opacity: 0; transform: translateY(30px); }
+            }
+            .notification-toast {
+                animation: slideUp 0.5s ease;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+});
+
+// ==========================================================================
+// 25. تصدير الدوال
 // ==========================================================================
 window.getCurrentUser = getCurrentUser;
 window.isAdminUser = isAdminUser;
 window.closeModal = closeModal;
 window.openModal = openModal;
 window.loadUsersDevicesData = loadUsersDevicesData;
-window.approveDeviceFromToast = approveDeviceFromToast;
-window.rejectDeviceFromToast = rejectDeviceFromToast;
-
-console.log('✅ تم تحميل النظام الجديد - بدون رموز دخول');
+window.approveDevice = approveDevice;
+window.rejectDevice = rejectDevice;
+window.markNotificationRead = markNotificationRead;
+window.markAllNotificationsRead = markAllNotificationsRead;
+window.loadNotifications = loadNotifications;
