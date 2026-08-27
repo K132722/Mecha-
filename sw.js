@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mecha-pwa-v28';
+const CACHE_NAME = 'mecha-pwa-v26'; // رفع الإصدار
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -8,15 +8,15 @@ const STATIC_ASSETS = [
     './firebase-messaging-sw.js',
     './study-materials.js',
     './manifest.json',
-    './logo.png',
-    './document.png'
+    './logo.png'
 ];
 
-// 1. تثبيت وتخزين الملفات
+// 1. تثبيت وتخزين الملفات الأساسية محلياً
 self.addEventListener('install', (e) => {
     self.skipWaiting();
     e.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
+            // تخزين كل ملف على حدة بدلاً من addAll
             for (const asset of STATIC_ASSETS) {
                 try {
                     await cache.add(asset);
@@ -25,100 +25,78 @@ self.addEventListener('install', (e) => {
                     console.error(`❌ فشل تخزين: ${asset}`, err);
                 }
             }
-            console.log('✅ جميع الملفات الأساسية تم تخزينها');
+            // تأكيد تخزين study-materials.js
+            try {
+                await cache.add('./study-materials.js');
+                console.log('✅ تم تأكيد تخزين study-materials.js');
+            } catch (err) {
+                console.error('❌ فشل تخزين study-materials.js:', err);
+            }
         })
     );
 });
 
-// 2. تنظيف الإصدارات القديمة - ✅ بدون self.clients.claim()
+// 2. تنظيف الإصدارات القديمة من الكاش
 self.addEventListener('activate', (e) => {
     e.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
-                    if (key !== CACHE_NAME) {
-                        console.log(`🗑️ حذف الكاش القديم: ${key}`);
-                        return caches.delete(key);
-                    }
+                    if (key !== CACHE_NAME) return caches.delete(key);
                 })
             );
-        })
-        // ✅ تم حذف .then(() => self.clients.claim())
+        }).then(() => self.clients.claim())
     );
 });
 
-// 3. استراتيجية الاسترجاع
+// 3. إدارة استرجاع الملفات (Fetch Strategy)
 self.addEventListener('fetch', (e) => {
     const url = e.request.url;
 
+    // أ) الاستثناءات
     if (
         e.request.method !== 'GET' || 
         url.includes('firebaseio.com') || 
         url.includes('googleapis.com') || 
+        url.includes('replit') ||
         url.includes('onrender.com') ||
         url.includes('telegram.org') ||
         url.includes('/files/') ||
         url.includes('/download/') ||
-        url.includes('/view/') ||
-        url.includes('/api/')
+        url.includes('/view/')
     ) {
-        return;
+        return; 
     }
 
+    // ب) طلبات الانتقال بين الصفحات (HTML Navigation)
     if (e.request.mode === 'navigate') {
         e.respondWith(
-            fetch(e.request)
-                .then(response => {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(e.request, clone);
-                    });
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match(e.request)
-                        .then(cached => cached || caches.match('./study-materials.html'));
-                })
+            fetch(e.request).catch(() => {
+                return caches.match(e.request).then((cachedPage) => {
+                    return cachedPage || caches.match('./study-materials.html') || caches.match('./index.html');
+                });
+            })
         );
         return;
     }
 
+    // ج) الأصول الثابتة - Cache First مع fallback للـ network
     e.respondWith(
         caches.match(e.request).then((cachedResponse) => {
             if (cachedResponse) {
                 return cachedResponse;
             }
+            // إذا لم يكن في الكاش، حاول التحميل من الشبكة واحفظه للاستخدام القادم
             return fetch(e.request).then((response) => {
+                // خزن النسخة الجديدة في الكاش
                 if (response && response.status === 200) {
-                    const clone = response.clone();
+                    const clonedResponse = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
-                        cache.put(e.request, clone);
+                        cache.put(e.request, clonedResponse);
                     });
                 }
                 return response;
-            }).catch(() => {
-                if (e.request.mode === 'navigate') {
-                    return caches.match('./study-materials.html');
-                }
-                return new Response('تعذر تحميل الملف', { status: 404 });
             });
         })
     );
 });
-
-// ================================================================
-// ✅ دعم النبض (Keep-Alive) - أضف هذا في نهاية الملف
-// ================================================================
-
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'KEEP_ALIVE_PING') {
-        if (event.ports && event.ports.length > 0) {
-            event.ports[0].postMessage({ 
-                type: 'KEEP_ALIVE_PONG',
-                timestamp: Date.now()
-            });
-        }
-    }
-});
-
-console.log('✅ SW Keep-alive support added');
