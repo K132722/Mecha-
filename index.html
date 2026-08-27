@@ -16,16 +16,34 @@
     <div class="glass-card login-card">
         <img src="logo.png" alt="الشعار" class="login-logo" onerror="this.style.display='none'">
         <h2>تسجيل الدخول للمنظومة</h2>
-        <div class="input-group">
-            <label>رقم الهاتف:</label>
-            <input type="tel" id="phoneInput" placeholder="77XXXXXXX">
+        
+        <!-- الخطوة 1: إدخال رقم الهاتف -->
+        <div id="step1">
+            <div class="input-group">
+                <label>📱 رقم الهاتف:</label>
+                <input type="tel" id="phoneInput" placeholder="77XXXXXXX" maxlength="10">
+            </div>
+            <button id="btnCheckPhone" class="glass-btn primary-btn">🔍 التحقق من الرقم</button>
+            <p id="phoneStatus" class="status-msg"></p>
         </div>
-        <div class="input-group">
-            <label>رمز الدخول:</label>
-            <input type="password" id="codeInput" placeholder="******">
+
+        <!-- الخطوة 2: إرسال رمز التحقق عبر واتساب -->
+        <div id="step2" style="display:none;">
+            <div style="background:rgba(212,175,55,0.08); padding:12px; border-radius:12px; margin-bottom:12px; border-right:3px solid var(--gold-primary);">
+                <p style="color: var(--text-muted); font-size: 13px; margin:0;">
+                    📱 سيتم إرسال طلب التحقق إلى المشرف عبر واتساب
+                </p>
+            </div>
+            <button id="btnSendWhatsApp" class="glass-btn primary-btn" style="width:100%;">
+                📤 إرسال طلب التحقق للمشرف
+            </button>
+            <div class="input-group" style="margin-top: 15px;">
+                <label>🔑 أدخل رمز التحقق المرسل من المشرف:</label>
+                <input type="text" id="verifyCodeInput" placeholder="أدخل الرمز المكون من 6 أرقام" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:5px;">
+            </div>
+            <button id="btnVerifyCode" class="glass-btn secondary-btn" style="width:100%;">✅ تأكيد الرمز والدخول</button>
+            <p id="verifyStatus" class="status-msg"></p>
         </div>
-        <button id="loginBtn" class="glass-btn primary-btn">دخول</button>
-        <p id="loginMsg" class="status-msg"></p>
     </div>
 </div>
 
@@ -38,7 +56,7 @@
             <img src="logo.png" alt="شعار التطبيق" class="app-logo-prominent" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23f3c623\'/></svg>'">
             <div class="user-details">
                 <h2 id="userNameDisplay">مرحباً المهندس ...</h2>
-                <span class="user-role-badge" id="userRoleDisplay">مدير النظام</span>
+                <span class="user-role-badge" id="userRoleDisplay">عضو معتمد</span>
             </div>
         </div>
         
@@ -49,7 +67,7 @@
         </div>
     </header>
 
-    <!-- 2. حاوية الإعلانات الكبيرة (Hero Offline Banner) -->
+    <!-- 2. حاوية الإعلانات -->
     <section class="glass-card banner-card">
         <div class="banner-header">
             <span class="banner-tag">📢 الإعلانات والتعميمات</span>
@@ -60,7 +78,6 @@
             <div class="empty-banner">جاري تحميل الإعلان...</div>
         </div>
 
-        <!-- أزرار التحكم بالحاوية -->
         <div class="banner-controls">
             <button id="btnRefreshData" class="glass-btn secondary-btn mini-btn">🔄 تحديث البيانات</button>
             <button id="btnAdminAddBanner" class="glass-btn primary-btn mini-btn" style="display:none;">➕ إدراج إعلان جديد (أبو جراح)</button>
@@ -69,7 +86,6 @@
 
     <!-- 3. الأزرار والقوائم الرئيسية -->
     <section class="main-menu-grid">
-        <!-- أيقونة المواد الدراسية -->
         <button class="glass-card menu-card" id="btnStudyMaterials">
             <div class="menu-icon">📚</div>
             <div class="menu-text">
@@ -78,7 +94,6 @@
             </div>
         </button>
 
-        <!-- أيقونة مراقبة الأعضاء والأمان (خاصة بأبو جراح أو تفاعلية للجميع) -->
         <button class="glass-card menu-card" id="btnUsersData">
             <div class="menu-icon">👥</div>
             <div class="menu-text">
@@ -90,7 +105,7 @@
 
 </div>
 
-<!-- نافذة إضافة إعلان جديد (أبو جراح فقط) -->
+<!-- نافذة إضافة إعلان جديد -->
 <div class="modal-overlay" id="addBannerModal">
     <div class="glass-card modal-box">
         <h3>➕ إدراج إعلان / تعميم جديد</h3>
@@ -113,10 +128,24 @@
     <div class="glass-card modal-box large-modal">
         <h3>👥 سجل أجهزة الأعضاء وتتبع التسريب</h3>
         <div id="usersDevicesList" class="users-list-container">
-            <p>جاري جالب بيانات النشاط والأجهزة...</p>
+            <p>جاري جلب بيانات النشاط والأجهزة...</p>
         </div>
         <div class="modal-actions">
             <button onclick="closeModal('usersDataModal')" class="glass-btn secondary-btn">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة طلب الموافقة على جهاز جديد (للمشرف) -->
+<div class="modal-overlay" id="approvalModal">
+    <div class="glass-card modal-box">
+        <h3>⚠️ طلب موافقة جهاز جديد</h3>
+        <div id="approvalDetails">
+            <p style="color: var(--text-muted);">جاري تحميل بيانات الطلب...</p>
+        </div>
+        <div class="modal-actions">
+            <button id="btnApproveDevice" class="glass-btn primary-btn">✅ موافقة</button>
+            <button id="btnRejectDevice" class="glass-btn danger-btn">❌ رفض</button>
         </div>
     </div>
 </div>
@@ -126,18 +155,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script src="app.js"></script>
-<!-- ====== تسجيل Service Worker ====== -->
 <script>
-    // تسجيل Service Worker للتطبيق
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('✅ SW registered:', reg))
-            .catch(err => console.error('❌ SW registration failed:', err));
-        
-        // تسجيل Service Worker الخاص بـ Firebase Messaging
-        navigator.serviceWorker.register('./firebase-messaging-sw.js')
-            .then(reg => console.log('✅ FCM SW registered:', reg))
-            .catch(err => console.error('❌ FCM SW registration failed:', err));
+        navigator.serviceWorker.register('./sw.js');
     }
 </script>
 </body>
