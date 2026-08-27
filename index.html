@@ -12,37 +12,71 @@
 <body>
 
 <!-- شاشة تسجيل الدخول -->
-<div class="login-overlay" id="loginOverlay">
+<div class="login-overlay" id="loginOverlay" style="display:none;">
     <div class="glass-card login-card">
         <img src="logo.png" alt="الشعار" class="login-logo" onerror="this.style.display='none'">
         <h2>تسجيل الدخول للمنظومة</h2>
         
         <!-- الخطوة 1: إدخال رقم الهاتف -->
-        <div id="step1">
+        <div id="stepPhone">
             <div class="input-group">
                 <label>📱 رقم الهاتف:</label>
-                <input type="tel" id="phoneInput" placeholder="77XXXXXXX" maxlength="10">
+                <input type="tel" id="phoneInput" placeholder="77XXXXXXX">
             </div>
-            <button id="btnCheckPhone" class="glass-btn primary-btn">🔍 التحقق من الرقم</button>
-            <p id="phoneStatus" class="status-msg"></p>
+            <button id="btnCheckPhone" class="glass-btn primary-btn">تحقق من الرقم</button>
+            <p id="loginMsg" class="status-msg"></p>
         </div>
 
-        <!-- الخطوة 2: إرسال رمز التحقق عبر واتساب -->
-        <div id="step2" style="display:none;">
-            <div style="background:rgba(212,175,55,0.08); padding:12px; border-radius:12px; margin-bottom:12px; border-right:3px solid var(--gold-primary);">
-                <p style="color: var(--text-muted); font-size: 13px; margin:0;">
-                    📱 سيتم إرسال طلب التحقق إلى المشرف عبر واتساب
-                </p>
+        <!-- الخطوة 2: عرض الرمز المشفر وطلب التحقق -->
+        <div id="stepRequestCode" style="display:none;">
+            <div class="info-box" style="background:rgba(212,175,55,0.1); padding:12px; border-radius:12px; margin:10px 0; text-align:center;">
+                <p style="color:var(--gold-secondary); font-size:14px;">✅ تم التحقق من رقمك</p>
+                <p style="color:var(--text-muted); font-size:13px;" id="verifiedUserName">المهندس ...</p>
             </div>
-            <button id="btnSendWhatsApp" class="glass-btn primary-btn" style="width:100%;">
-                📤 إرسال طلب التحقق للمشرف
-            </button>
-            <div class="input-group" style="margin-top: 15px;">
-                <label>🔑 أدخل رمز التحقق المرسل من المشرف:</label>
-                <input type="text" id="verifyCodeInput" placeholder="أدخل الرمز المكون من 6 أرقام" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:5px;">
+            
+            <!-- حاوية الرمز المشفر مع زر النسخ -->
+            <div class="code-container" style="background:rgba(255,255,255,0.03); border-radius:12px; padding:14px; margin:12px 0; border:1px solid rgba(212,175,55,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span style="color:var(--text-dim); font-size:12px;">📋 الرمز المشفر:</span>
+                    <div style="display:flex; gap:8px; align-items:center; flex:1; min-width:150px;">
+                        <input type="text" id="encodedCodeDisplay" readonly style="
+                            flex:1;
+                            background:rgba(0,0,0,0.4);
+                            border:1px solid rgba(212,175,55,0.2);
+                            border-radius:8px;
+                            padding:8px 12px;
+                            color:var(--text-light);
+                            font-size:11px;
+                            font-family:monospace;
+                            direction:ltr;
+                            text-align:left;
+                            min-width:80px;
+                            max-width:100%;
+                        " value="جاري التوليد...">
+                        <button id="btnCopyEncoded" class="glass-btn secondary-btn mini-btn" style="padding:6px 12px; font-size:11px; white-space:nowrap;">
+                            📋 نسخ
+                        </button>
+                    </div>
+                </div>
+                <div style="margin-top:6px; font-size:10px; color:var(--text-dim);">
+                    ⚡ انسخ الرمز وأرسله للمشرف عبر واتساب
+                </div>
             </div>
-            <button id="btnVerifyCode" class="glass-btn secondary-btn" style="width:100%;">✅ تأكيد الرمز والدخول</button>
-            <p id="verifyStatus" class="status-msg"></p>
+
+            <!-- أزرار الإجراء -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;">
+                <button id="btnRequestCode" class="glass-btn primary-btn" style="flex:1; background:#25D366; border-color:#25D366; min-width:120px;">
+                    📱 طلب عبر واتساب
+                </button>
+            </div>
+
+            <!-- إدخال رمز التحقق -->
+            <div class="input-group" style="margin-top:12px;">
+                <label>🔑 أدخل رمز قبول الإذن:</label>
+                <input type="text" id="codeInput" placeholder="أدخل الرقم المستلم من المشرف">
+            </div>
+            <button id="btnVerifyCode" class="glass-btn primary-btn" style="width:100%;">✅ دخول</button>
+            <p id="loginMsg2" class="status-msg"></p>
         </div>
     </div>
 </div>
@@ -57,6 +91,7 @@
             <div class="user-details">
                 <h2 id="userNameDisplay">مرحباً المهندس ...</h2>
                 <span class="user-role-badge" id="userRoleDisplay">عضو معتمد</span>
+                <span class="device-id-badge" id="deviceIdDisplay" style="font-size:10px; color:var(--text-dim); display:block; margin-top:2px;">📱 المعرف: ...</span>
             </div>
         </div>
         
@@ -67,7 +102,7 @@
         </div>
     </header>
 
-    <!-- 2. حاوية الإعلانات -->
+    <!-- 2. حاوية الإعلانات الكبيرة -->
     <section class="glass-card banner-card">
         <div class="banner-header">
             <span class="banner-tag">📢 الإعلانات والتعميمات</span>
@@ -80,7 +115,7 @@
 
         <div class="banner-controls">
             <button id="btnRefreshData" class="glass-btn secondary-btn mini-btn">🔄 تحديث البيانات</button>
-            <button id="btnAdminAddBanner" class="glass-btn primary-btn mini-btn" style="display:none;">➕ إدراج إعلان جديد (أبو جراح)</button>
+            <button id="btnAdminAddBanner" class="glass-btn primary-btn mini-btn" style="display:none;">➕ إدراج إعلان جديد</button>
         </div>
     </section>
 
@@ -128,24 +163,10 @@
     <div class="glass-card modal-box large-modal">
         <h3>👥 سجل أجهزة الأعضاء وتتبع التسريب</h3>
         <div id="usersDevicesList" class="users-list-container">
-            <p>جاري جلب بيانات النشاط والأجهزة...</p>
+            <p>جاري جالب بيانات النشاط والأجهزة...</p>
         </div>
         <div class="modal-actions">
             <button onclick="closeModal('usersDataModal')" class="glass-btn secondary-btn">إغلاق</button>
-        </div>
-    </div>
-</div>
-
-<!-- نافذة طلب الموافقة على جهاز جديد (للمشرف) -->
-<div class="modal-overlay" id="approvalModal">
-    <div class="glass-card modal-box">
-        <h3>⚠️ طلب موافقة جهاز جديد</h3>
-        <div id="approvalDetails">
-            <p style="color: var(--text-muted);">جاري تحميل بيانات الطلب...</p>
-        </div>
-        <div class="modal-actions">
-            <button id="btnApproveDevice" class="glass-btn primary-btn">✅ موافقة</button>
-            <button id="btnRejectDevice" class="glass-btn danger-btn">❌ رفض</button>
         </div>
     </div>
 </div>
