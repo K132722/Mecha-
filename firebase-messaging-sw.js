@@ -1,8 +1,8 @@
-// firebase-messaging-sw.js - نسخة محسّنة (مثل OneSignal)
+// firebase-messaging-sw.js
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-// ====== تهيئة Firebase ======
+// تهيئة Firebase
 firebase.initializeApp({
     apiKey: "AIzaSyCGUTMbiVWspimLsTk9JQ9eExm-XuhkXKY",
     authDomain: "pwa-app-a8e58.firebaseapp.com",
@@ -15,126 +15,85 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ====== ✅ تقنية Keep-Alive (مثل OneSignal) ======
-let keepAliveInterval = null;
-let lastPing = Date.now();
-
-function startKeepAlive() {
-    if (keepAliveInterval) {
-        clearInterval(keepAliveInterval);
-    }
-    
-    keepAliveInterval = setInterval(() => {
-        const now = Date.now();
-        lastPing = now;
-        
-        self.clients.matchAll().then(clients => {
-            clients.forEach(client => {
-                client.postMessage({ 
-                    type: 'KEEP_ALIVE_PING',
-                    timestamp: now
-                });
-            });
-        });
-        
-        console.log('💓 Keep-alive ping sent');
-    }, 15000);
-}
-
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
-    startKeepAlive();
-    console.log('✅ Service Worker installed with keep-alive');
-});
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-    startKeepAlive();
-    console.log('✅ Service Worker activated with keep-alive');
-});
-
-// ====== ✅ معالجة الإشعارات الخلفية ======
+// معالجة الإشعارات الخلفية
 messaging.onBackgroundMessage((payload) => {
-    console.log('📨 Received background message:', payload);
+    console.log('[firebase-messaging-sw.js] Received background message:', payload);
     
-    const notificationTitle = payload.notification?.title || payload.data?.title || '📢 تحديث جديد';
-    const notificationBody = payload.notification?.body || payload.data?.body || '';
-    const notificationData = payload.data || {};
+    const notification = payload.notification || {};
+    const data = payload.data || {};
     
-    // محاولة عرض الإشعار فوراً
-    showNotification(notificationTitle, notificationBody, notificationData);
+    const notificationTitle = notification.title || data.title || '📢 تحديث جديد';
+    const notificationOptions = {
+        body: notification.body || data.body || '',
+        icon: '/logo.png',
+        badge: '/logo.png',
+        data: {
+            path: data.path || '',
+            type: data.type || 'notification',
+            postIndex: data.postIndex,
+            folderName: data.folderName || '',
+            click_action: data.click_action || ''
+        },
+        tag: data.id || 'notification',
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        actions: [
+            {
+                action: 'open',
+                title: '📂 فتح',
+                icon: '/logo.png'
+            },
+            {
+                action: 'dismiss',
+                title: '✕ إغلاق',
+                icon: '/logo.png'
+            }
+        ]
+    };
     
-    // محاولة ثانية بعد 2 ثانية
-    setTimeout(() => {
-        showNotification(notificationTitle, notificationBody, notificationData);
-    }, 2000);
+    self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-function showNotification(title, body, data) {
-    try {
-        const options = {
-            body: body || '📢 تحديث جديد في المواد الدراسية',
-            icon: '/logo.png',
-            badge: '/logo.png',
-            data: data || {},
-            tag: data?.path || 'notification',
-            requireInteraction: true,
-            vibrate: [200, 100, 200],
-            actions: [
-                { action: 'open', title: '📂 فتح التطبيق' },
-                { action: 'dismiss', title: 'إغلاق' }
-            ],
-            priority: 'high',
-            urgency: 'high'
-        };
-        
-        self.registration.showNotification(title, options);
-        console.log('✅ Notification shown successfully');
-        
-    } catch (error) {
-        console.error('❌ Failed to show notification:', error);
-    }
-}
-
-// ====== معالجة النقر على الإشعار ======
+// معالجة النقر على الإشعار
 self.addEventListener('notificationclick', function(event) {
-    console.log('🔔 Notification clicked:', event);
+    console.log('[firebase-messaging-sw.js] Notification click received.');
     
-    event.notification.close();
+    const notification = event.notification;
+    notification.close();
     
-    const data = event.notification.data || {};
+    const data = notification.data || {};
     const path = data.path || '';
     const postIndex = data.postIndex;
+    const type = data.type || '';
     
-    let urlToOpen = '/study-materials.html';
-    const params = new URLSearchParams();
+    // معالجة إجراءات الإشعار
+    if (event.action === 'dismiss') {
+        return;
+    }
     
+    const urlToOpen = new URL('/', self.location.origin);
     if (path) {
-        params.set('path', path);
-        params.set('openNotifications', 'true');
-        if (postIndex !== undefined && postIndex !== '') {
-            params.set('highlight', postIndex);
+        urlToOpen.searchParams.set('path', path);
+        urlToOpen.searchParams.set('openNotifications', 'true');
+        if (postIndex !== undefined && postIndex !== null) {
+            urlToOpen.searchParams.set('highlight', postIndex);
         }
     }
     
-    if (params.toString()) {
-        urlToOpen += '?' + params.toString();
-    }
+    // فتح النافذة أو التركيز عليها
+    const promiseChain = clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+    }).then((windowClients) => {
+        for (const client of windowClients) {
+            if (client.url === urlToOpen.toString() && 'focus' in client) {
+                return client.focus();
+            }
+        }
+        if (clients.openWindow) {
+            return clients.openWindow(urlToOpen.toString());
+        }
+    });
     
-    event.waitUntil(
-        clients.matchAll({ type: 'window' }).then((clientList) => {
-            for (const client of clientList) {
-                if (client.url.includes('/study-materials.html') && 'focus' in client) {
-                    return client.focus().then(() => {
-                        client.navigate(urlToOpen);
-                    });
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
-    );
+    event.waitUntil(promiseChain);
 });
-
-console.log('✅ FCM Service Worker initialized (Enhanced)');
