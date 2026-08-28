@@ -3,21 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
-    <title>المواد الدراسية - منظومة الميكاترونكس</title>
+    <title>📚 المواد الدراسية - منظومة الميكاترونكس</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0a192f">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <meta name="theme-color" content="#0a0f1e">
+    <link rel="stylesheet" href="styles.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* ====== أنماط خاصة بصفحة المواد الدراسية ====== */
+        /* ============================================================
+           🎨 التصميم الأساسي
+           ============================================================ */
         :root {
+            --primary-dark: #0a0f1e;
+            --primary-surface: #111827;
+            --card-bg: rgba(17, 24, 39, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.06);
             --gold-primary: #d4af37;
             --gold-secondary: #f5d76e;
-            --gold-grad: linear-gradient(135deg, #d4af37, #f5d76e);
-            --text-muted: #94a3b8;
-            --text-dim: #64748b;
-            --text-gold: #d4af37;
-            --success-color: #4ade80;
+            --gold-grad: linear-gradient(135deg, #d4af37, #f5d76e, #d4af37);
+            --gold-glow: 0 0 40px rgba(212, 175, 55, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --success: #4ade80;
+            --danger: #ef4444;
+            --info: #38bdf8;
+            --accent-purple: #8b5cf6;
+            --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.5);
+            --radius-card: 20px;
+            --radius-sm: 12px;
+            --transition-smooth: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         * {
@@ -27,436 +41,589 @@
         }
 
         body {
-            background: #0a192f;
-            color: #ffffff;
+            background: var(--primary-dark);
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.02) 0%, transparent 50%);
+            color: var(--text-primary);
             font-family: 'Tajawal', sans-serif;
             min-height: 100vh;
-            padding: 16px;
+            padding: 12px;
             direction: rtl;
         }
 
         .study-container {
             width: 100%;
-            max-width: 640px;
+            max-width: 720px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            padding-top: 12px;
-            padding-bottom: 80px;
+            gap: 14px;
+            padding-top: 8px;
+            padding-bottom: 90px;
         }
 
-        /* ====== شريط المسار (Breadcrumb) ====== */
-        .breadcrumb-bar {
-            background: rgba(12, 25, 45, 0.5);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(212, 175, 55, 0.12);
-            border-radius: 16px;
-            padding: 12px 18px;
+        /* ============================================================
+           🏷️ شريط الحالة العلوي
+           ============================================================ */
+        .status-bar {
             display: flex;
-            flex-wrap: wrap;
+            justify-content: space-between;
             align-items: center;
-            gap: 6px 10px;
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
+            padding: 10px 16px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            color: var(--text-secondary);
         }
 
-        .breadcrumb-bar .crumb {
-            cursor: pointer;
-            color: var(--text-gold);
-            font-weight: 500;
-            transition: all 0.3s ease;
-            padding: 3px 8px;
-            border-radius: 6px;
+        .status-bar .status-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .breadcrumb-bar .crumb:hover {
-            background: rgba(212, 175, 55, 0.1);
-            color: #fff;
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 6px;
+        }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 12px rgba(74, 222, 128, 0.4); }
+        .status-dot.offline { background: var(--danger); box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
+
+        .storage-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.04);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.04);
         }
 
-        .breadcrumb-bar .crumb-sep {
-            color: var(--text-dim);
-            font-size: 11px;
+        .storage-indicator .storage-bar {
+            width: 40px;
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            overflow: hidden;
         }
 
-        .breadcrumb-bar .crumb-current {
-            color: #fff;
-            font-weight: 600;
+        .storage-indicator .storage-bar .storage-fill {
+            height: 100%;
+            background: var(--gold-grad);
+            border-radius: 4px;
+            transition: width 0.6s ease;
         }
 
-        /* ====== شريط البحث ====== */
-        .search-bar {
-            background: rgba(12, 25, 45, 0.4);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
+        /* ============================================================
+           🔍 شريط البحث
+           ============================================================ */
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-bar-advanced {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
             padding: 10px 16px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
+            gap: 12px;
+            transition: var(--transition-smooth);
         }
 
-        .search-bar:focus-within {
+        .search-bar-advanced:focus-within {
             border-color: var(--gold-primary);
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.05);
+            box-shadow: var(--gold-glow);
+            transform: translateY(-1px);
         }
 
-        .search-bar input {
+        .search-bar-advanced input {
             flex: 1;
             background: transparent;
             border: none;
-            color: #fff;
+            color: var(--text-primary);
             font-size: 14px;
             outline: none;
             font-family: 'Tajawal', sans-serif;
             padding: 4px 0;
         }
 
-        .search-bar input::placeholder {
-            color: var(--text-dim);
+        .search-bar-advanced input::placeholder {
+            color: var(--text-muted);
         }
 
-        .search-bar .search-icon {
-            color: var(--text-dim);
-            font-size: 18px;
-        }
-
-        .search-bar .search-clear {
-            color: var(--text-dim);
+        .search-bar-advanced .search-clear {
+            color: var(--text-muted);
             cursor: pointer;
             font-size: 16px;
-            padding: 0 4px;
             display: none;
+            transition: var(--transition-smooth);
         }
 
-        .search-bar .search-clear.visible {
+        .search-bar-advanced .search-clear.visible {
             display: block;
         }
 
-        /* ====== نتائج البحث ====== */
-        .search-results {
+        .search-results-dropdown {
             display: none;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             max-height: 400px;
             overflow-y: auto;
-            background: rgba(12, 25, 45, 0.6);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(212, 175, 55, 0.08);
-            border-radius: 16px;
-            padding: 12px;
+            background: var(--card-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            margin-top: 8px;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-card);
         }
 
-        .search-results.active {
+        .search-results-dropdown.active {
             display: flex;
         }
 
-        .search-results .search-result-item {
+        .search-result-item {
             padding: 10px 14px;
-            border-radius: 10px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
         }
 
-        .search-results .search-result-item:hover {
-            background: rgba(212, 175, 55, 0.08);
+        .search-result-item:hover {
+            background: rgba(212, 175, 55, 0.06);
+            border-color: rgba(212, 175, 55, 0.1);
             transform: translateX(-4px);
         }
 
-        .search-results .search-result-item .result-icon {
-            font-size: 18px;
-        }
-
-        .search-results .search-result-item .result-info {
-            flex: 1;
-        }
-
-        .search-results .search-result-item .result-info .result-title {
-            color: #fff;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .search-results .search-result-item .result-info .result-path {
-            color: var(--text-dim);
-            font-size: 11px;
-        }
-
-        .search-results .search-result-item .result-badge {
+        .search-result-item .result-icon { font-size: 20px; flex-shrink: 0; }
+        .search-result-item .result-info { flex: 1; min-width: 0; }
+        .search-result-item .result-info .result-title { color: var(--text-primary); font-size: 13px; font-weight: 600; }
+        .search-result-item .result-info .result-path { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+        .search-result-item .result-badge {
             background: rgba(212, 175, 55, 0.1);
-            color: var(--text-gold);
-            font-size: 10px;
-            padding: 2px 10px;
+            color: var(--gold-primary);
+            font-size: 9px;
+            padding: 2px 12px;
             border-radius: 20px;
-            font-weight: 600;
+            font-weight: 700;
+            flex-shrink: 0;
         }
 
-        .search-no-results {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-dim);
-            font-size: 13px;
+        /* ============================================================
+           🧭 شريط التنقل
+           ============================================================ */
+        .breadcrumb-advanced {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 10px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
         }
 
-        /* ====== رأس المجلد ====== */
-        .folder-header {
+        .breadcrumb-advanced .crumb {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: var(--transition-smooth);
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .breadcrumb-advanced .crumb:hover {
+            color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.06);
+        }
+
+        .breadcrumb-advanced .crumb.current {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .breadcrumb-advanced .crumb-sep {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        /* ============================================================
+           📂 رأس المجلد مع الأزرار
+           ============================================================ */
+        .folder-header-advanced {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 6px;
+            padding: 6px 0;
         }
 
-        .folder-header h3 {
-            color: var(--gold-secondary);
-            font-size: 18px;
-            font-weight: 700;
+        .folder-header-advanced .folder-title {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .folder-header h3 .folder-icon {
-            font-size: 22px;
-        }
+        .folder-header-advanced .folder-title .title-icon { font-size: 28px; }
 
-        .action-btns-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn-back {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: var(--text-muted);
-            padding: 8px 16px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(4px);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-back:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: var(--gold-primary);
-            color: #fff;
-        }
-
-        .btn-add-folder {
+        .folder-header-advanced .folder-title h2 {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 900;
             background: var(--gold-grad);
-            color: #060d18;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .folder-header-advanced .folder-title .folder-count-badge {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-secondary);
+            font-size: 11px;
+            padding: 2px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            font-weight: 500;
+        }
+
+        /* ============================================================
+           🔘 مجموعة الأزرار (بما فيها زر الإشعارات)
+           ============================================================ */
+        .action-buttons-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
             border: none;
-            padding: 8px 18px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
-        }
-
-        .btn-add-folder:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 6px 30px rgba(212, 175, 55, 0.35);
-        }
-
-        .btn-add-post {
-            background: rgba(74, 222, 128, 0.15);
-            color: var(--success-color);
-            border: 1px solid rgba(74, 222, 128, 0.2);
-            padding: 8px 18px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
             font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-add-post:hover {
-            background: rgba(74, 222, 128, 0.25);
-            transform: translateY(-2px);
-        }
-
-        .btn-home-return {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
-            padding: 8px 14px;
-            border-radius: 10px;
+            font-family: 'Tajawal', sans-serif;
             cursor: pointer;
-            font-size: 13px;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+            transition: var(--transition-smooth);
+            backdrop-filter: blur(4px);
+            position: relative;
         }
 
-        .btn-home-return:hover {
-            background: rgba(255, 255, 255, 0.08);
+        .btn-action:hover { transform: translateY(-2px); }
+
+        .btn-action.btn-primary {
+            background: var(--gold-grad);
+            color: #0a0f1e;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
+        }
+        .btn-action.btn-primary:hover { box-shadow: 0 8px 35px rgba(212, 175, 55, 0.35); }
+
+        .btn-action.btn-secondary {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+        }
+        .btn-action.btn-secondary:hover {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
             border-color: var(--gold-primary);
-            color: #fff;
         }
 
-        .btn-refresh {
-            background: rgba(52, 152, 219, 0.15);
-            border: 1px solid rgba(52, 152, 219, 0.2);
-            color: #5dade2;
-            padding: 8px 18px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+        .btn-action.btn-success {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+        }
+        .btn-action.btn-success:hover {
+            background: rgba(74, 222, 128, 0.2);
+            border-color: var(--success);
+        }
+
+        .btn-action.btn-info {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--info);
+            border: 1px solid rgba(56, 189, 248, 0.12);
+        }
+        .btn-action.btn-info:hover {
+            background: rgba(56, 189, 248, 0.18);
+            border-color: var(--info);
+        }
+
+        /* ============================================================
+           🔔 زر الإشعارات (ضمن مجموعة الأزرار)
+           ============================================================ */
+        .btn-notification {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 4px;
+            padding: 8px 14px;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gold-primary);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+            position: relative;
+            min-width: 44px;
         }
 
-        .btn-refresh:hover {
-            background: rgba(52, 152, 219, 0.25);
+        .btn-notification:hover {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: var(--gold-primary);
             transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
         }
 
-        .btn-refresh:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        /* شارة العداد داخل الزر */
+        .btn-notification .notif-badge-inline {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--danger);
+            color: #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 9px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--primary-surface);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
         }
 
-        /* ====== شبكة المجلدات والمنشورات ====== */
+        .btn-notification .notif-badge-inline.visible {
+            display: flex;
+        }
+
+        /* ============================================================
+           📇 شبكة المحتوى
+           ============================================================ */
         #foldersGrid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-            padding: 10px 0;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 14px;
+            padding: 6px 0;
         }
 
-        .folder-card {
-            background: rgba(12, 25, 45, 0.4);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            border-radius: 16px;
-            padding: 18px 14px;
+        .folder-card-advanced {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
+            padding: 20px 14px;
             cursor: pointer;
-            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: var(--transition-smooth);
             text-align: center;
             position: relative;
             overflow: hidden;
             user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            min-height: 120px;
+            min-height: 130px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 6px;
         }
 
-        .folder-card:hover {
+        .folder-card-advanced:hover {
             border-color: var(--gold-primary);
-            background: rgba(22, 42, 72, 0.5);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.08);
+            transform: translateY(-6px);
+            box-shadow: var(--gold-glow);
         }
 
-        .folder-card .folder-icon-big {
-            font-size: 32px;
-            display: block;
-            margin-bottom: 8px;
-        }
+        .folder-card-advanced .folder-icon-large { font-size: 38px; display: block; position: relative; z-index: 1; }
+        .folder-card-advanced .folder-name { color: var(--text-primary); font-size: 14px; font-weight: 700; word-break: break-word; position: relative; z-index: 1; }
+        .folder-card-advanced .folder-desc { color: var(--text-muted); font-size: 11px; position: relative; z-index: 1; }
+        .folder-card-advanced .folder-meta { color: var(--text-muted); font-size: 10px; position: relative; z-index: 1; margin-top: 2px; }
 
-        .folder-card .folder-name {
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            word-break: break-word;
-        }
-
-        .folder-card .folder-name1 {
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-            word-break: break-word;
-        }
-
-        .folder-card .folder-count {
-            color: var(--text-dim);
-            font-size: 11px;
-            margin-top: 4px;
-        }
-
-        .folder-card .folder-actions-overlay {
+        .folder-card-advanced .folder-actions-overlay {
             position: absolute;
             top: 8px;
             left: 8px;
             display: none;
-            gap: 6px;
+            gap: 4px;
             z-index: 10;
         }
 
-        .folder-card:hover .folder-actions-overlay {
-            display: flex;
-        }
+        .folder-card-advanced:hover .folder-actions-overlay { display: flex; }
 
-        .folder-card .folder-actions-overlay button {
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .folder-card-advanced .folder-actions-overlay button {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--glass-border);
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            color: #fff;
+            width: 28px;
+            height: 28px;
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
+            font-size: 11px;
+            transition: var(--transition-smooth);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .folder-card .folder-actions-overlay button:hover {
+        .folder-card-advanced .folder-actions-overlay button:hover {
             background: var(--gold-grad);
-            color: #060d18;
+            color: #0a0f1e;
         }
 
-        .folder-card .folder-actions-overlay .btn-delete-folder:hover {
-            background: #ff4757;
+        .folder-card-advanced .folder-actions-overlay .btn-delete-folder:hover {
+            background: var(--danger);
             color: #fff;
         }
 
-        /* ====== بطاقة المنشور المربعة ====== */
-        .post-square-card {
+        /* ====== بطاقة المنشور ====== */
+        .post-card-advanced {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
+            padding: 16px 12px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            text-align: center;
             position: relative;
+            overflow: hidden;
+            user-select: none;
+            min-height: 160px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            text-align: center;
-            padding: 12px 8px;
-            min-height: 180px;
             gap: 4px;
         }
 
-        .post-card-admin-actions {
+        .post-card-advanced:hover {
+            border-color: rgba(212, 175, 55, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .post-card-advanced .post-icon { font-size: 32px; }
+        .post-card-advanced .post-title { color: var(--text-primary); font-size: 14px; font-weight: 700; word-break: break-word; }
+        .post-card-advanced .post-text {
+            color: var(--text-secondary) !important;
+            font-size: 11px !important;
+            line-height: 1.4 !important;
+            text-align: center !important;
+            margin: 2px 0 4px 0 !important;
+            word-break: break-word !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+        }
+
+        .post-card-advanced .post-file-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: 2px 0;
+        }
+
+        .post-card-advanced .post-file-info .file-ext {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold-primary);
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .post-card-advanced .post-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 10px;
+            font-size: 10px;
+            color: var(--text-muted);
+            margin: 4px 0;
+            justify-content: center;
+        }
+
+        .post-card-advanced .post-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .post-card-advanced .post-actions .doc-btn {
+            border: none;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .post-card-advanced .post-actions .doc-btn:hover { transform: translateY(-2px); }
+
+        .post-card-advanced .post-actions .btn-view {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+        }
+        .post-card-advanced .post-actions .btn-view:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: var(--gold-primary);
+        }
+
+        .post-card-advanced .post-actions .btn-save {
+            background: var(--gold-grad);
+            color: #0a0f1e;
+        }
+        .post-card-advanced .post-actions .btn-save:hover {
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .post-card-advanced .post-actions .btn-saved {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            cursor: default;
+        }
+
+        .post-card-advanced .post-admin-actions {
             position: absolute;
             top: 6px;
             left: 6px;
@@ -465,171 +632,304 @@
             z-index: 10;
         }
 
-        .post-card-admin-actions button {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .post-card-advanced .post-admin-actions button {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--glass-border);
             border-radius: 6px;
             padding: 3px 8px;
             font-size: 10px;
             cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition-smooth);
+        }
+
+        .post-card-advanced .post-admin-actions button:hover {
+            background: var(--gold-grad);
+            color: #0a0f1e;
+        }
+
+        .post-card-advanced .post-admin-actions .btn-delete-post:hover {
+            background: var(--danger);
             color: #fff;
-            transition: all 0.3s ease;
-        }
-
-        .post-card-admin-actions button:hover {
-            background: rgba(212, 175, 55, 0.3);
-        }
-
-        .post-details-text {
-            color: #cbd5e1 !important;
-            font-size: 11px !important;
-            line-height: 1.4 !important;
-            text-align: center !important;
-            margin: 4px 0 6px 0 !important;
-            word-break: break-word !important;
-            overflow-wrap: break-word !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-        }
-
-        /* ====== اسم الملف ====== */
-        .file-name-container {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 4px 0 !important;
-            gap: 2px !important;
-            width: 100%;
-        }
-
-        .file-name-line {
-            color: #ffffff !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            line-height: 1.35 !important;
-            text-align: center !important;
-            word-break: break-word !important;
-            overflow-wrap: break-word !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            direction: ltr !important;
-        }
-
-        .file-ext-badge {
-            color: #94a3b8 !important;
-            font-size: 11px !important;
-            font-weight: bold !important;
-            direction: ltr !important;
-            unicode-bidi: isolate !important;
-            margin-top: 1px !important;
-        }
-
-        /* ====== معلومات المنشور ====== */
-        .post-meta-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 10px;
-            color: var(--text-dim, #94a3b8);
-            margin: 4px 0;
-            width: 100%;
-        }
-
-        /* ====== أزرار المعاينة والحفظ ====== */
-        .post-square-actions {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-            width: 100%;
-            margin-top: 4px;
-            flex-wrap: wrap;
-        }
-
-        .doc-btn {
-            border: none;
-            border-radius: 20px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .doc-btn-view {
-            background: rgba(255, 255, 255, 0.9);
-            color: #0f172a;
-        }
-        .doc-btn-view:hover {
-            background: #ffffff;
-            transform: translateY(-1px);
-        }
-
-        .doc-btn-download {
-            background: #2563eb;
-            color: #ffffff;
-        }
-        .doc-btn-download:hover {
-            background: #1d4ed8;
-            transform: translateY(-1px);
         }
 
         /* ====== شريط التقدم للتحميل ====== */
-        .download-progress-box {
+        .download-progress-advanced {
             width: 100%;
-            margin-top: 8px;
+            margin-top: 6px;
             display: none;
         }
 
-        .download-progress-box .download-progress-bar {
+        .download-progress-advanced .progress-track {
+            background: rgba(255,255,255,0.06);
+            border-radius: 6px;
+            height: 5px;
+            overflow: hidden;
+        }
+
+        .download-progress-advanced .progress-track .progress-fill {
             height: 100%;
             width: 0%;
-            background: #2563eb;
-            border-radius: 4px;
+            background: var(--gold-grad);
+            border-radius: 6px;
             transition: width 0.3s ease;
         }
 
-        #offlineCheck {
-            color: #10b981;
-            font-size: 10px;
-            font-weight: 700;
-            margin-top: 4px;
+        .download-progress-advanced .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 3px;
         }
 
+        .offline-badge {
+            display: none;
+            color: var(--success);
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .offline-badge.visible { display: block; }
+
         /* ====== حالة فارغة ====== */
-        .empty-state {
+        .empty-state-advanced {
             text-align: center;
-            padding: 40px 20px;
-            color: var(--text-dim);
+            padding: 50px 20px;
             grid-column: 1 / -1;
         }
 
-        .empty-state .empty-icon {
-            font-size: 48px;
-            display: block;
-            margin-bottom: 12px;
-            opacity: 0.4;
+        .empty-state-advanced .empty-icon { font-size: 56px; display: block; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state-advanced h3 { color: var(--text-secondary); font-size: 16px; font-weight: 600; }
+        .empty-state-advanced p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+        /* ============================================================
+           📋 لوحة الإشعارات
+           ============================================================ */
+        .notifications-panel-advanced {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            background: var(--primary-surface);
+            backdrop-filter: blur(30px);
+            z-index: 10001;
+            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: -10px 0 60px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--glass-border);
         }
 
-        .empty-state p {
-            font-size: 14px;
-        }
+        .notifications-panel-advanced.open { right: 0; }
 
-        /* ====== النوافذ المنبثقة (Modals) ====== */
-        .modal-overlay.study-modal {
+        .notif-overlay-advanced {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(4, 10, 18, 0.88);
-            backdrop-filter: blur(25px) saturate(1.2);
+            background: rgba(0,0,0,0.6);
+            z-index: 10000;
+            display: none;
+            backdrop-filter: blur(6px);
+        }
+
+        .notif-overlay-advanced.open { display: block; }
+
+        .panel-header-advanced {
+            padding: 18px 20px 14px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .panel-header-advanced .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .panel-header-advanced .header-left .bell-icon { font-size: 24px; }
+        .panel-header-advanced .header-left h3 { color: var(--text-primary); margin: 0; font-size: 17px; font-weight: 700; }
+        .panel-header-advanced .header-left .unread-count {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            padding: 1px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .panel-header-advanced .header-right { display: flex; gap: 6px; }
+
+        .panel-header-advanced .header-right button {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Tajawal', sans-serif;
+            transition: var(--transition-smooth);
+        }
+
+        .panel-header-advanced .header-right button:hover {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+        }
+
+        .panel-header-advanced .header-right .close-panel {
+            background: none;
+            border: none;
+            font-size: 22px;
+            padding: 0 4px;
+            color: var(--text-muted);
+        }
+
+        .panel-header-advanced .header-right .close-panel:hover { color: var(--text-primary); }
+
+        .notif-list-advanced {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .notif-item-advanced {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            transition: var(--transition-smooth);
+        }
+
+        .notif-item-advanced.unread {
+            background: rgba(212, 175, 55, 0.04);
+            border-color: rgba(212, 175, 55, 0.12);
+        }
+
+        .notif-item-advanced .notif-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .notif-item-advanced .notif-row .notif-icon { font-size: 18px; flex-shrink: 0; }
+        .notif-item-advanced .notif-row .notif-body { flex: 1; min-width: 0; }
+
+        .notif-item-advanced .notif-row .notif-body .notif-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .notif-item-advanced .notif-row .notif-body .notif-title-row .notif-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .notif-item-advanced .notif-row .notif-body .notif-title-row .unread-dot {
+            background: var(--danger);
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .notif-item-advanced .notif-row .notif-body .notif-message {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+            margin-top: 2px;
+        }
+
+        .notif-item-advanced .notif-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .notif-item-advanced .notif-footer .notif-time { color: var(--text-muted); font-size: 10px; }
+        .notif-item-advanced .notif-footer .notif-actions { display: flex; gap: 4px; }
+
+        .notif-item-advanced .notif-footer .notif-actions .goto-btn {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            color: var(--gold-primary);
+            padding: 3px 12px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .notif-item-advanced .notif-footer .notif-actions .goto-btn:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        .notif-item-advanced .notif-footer .notif-actions .read-tag {
+            color: var(--text-muted);
+            font-size: 9px;
+        }
+
+        .panel-footer-advanced {
+            padding: 10px 20px 18px;
+            border-top: 1px solid var(--glass-border);
+            flex-shrink: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .panel-footer-advanced .clear-btn {
+            flex: 1;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            transition: var(--transition-smooth);
+        }
+
+        .panel-footer-advanced .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.16);
+        }
+
+        .notif-empty-advanced {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px 20px;
+            font-size: 13px;
+        }
+
+        .notif-empty-advanced .empty-icon { font-size: 32px; display: block; margin-bottom: 12px; }
+
+        /* ============================================================
+           🪟 النوافذ المنبثقة
+           ============================================================ */
+        .modal-overlay-advanced {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(4, 10, 18, 0.85);
+            backdrop-filter: blur(30px) saturate(1.2);
             display: none;
             justify-content: center;
             align-items: center;
@@ -637,146 +937,122 @@
             padding: 20px;
         }
 
-        .modal-overlay.study-modal.active {
-            display: flex;
-        }
+        .modal-overlay-advanced.active { display: flex; }
 
-        .modal-box.study-modal-box {
+        .modal-box-advanced {
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             display: flex;
             flex-direction: column;
             gap: 14px;
             padding: 28px 24px;
-            background: rgba(12, 25, 45, 0.7);
-            border: 1px solid rgba(212, 175, 55, 0.15);
-            border-radius: 24px;
+            background: var(--primary-surface);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
             backdrop-filter: blur(30px);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+            box-shadow: var(--shadow-card);
         }
 
-        .modal-box.study-modal-box h3 {
-            color: var(--gold-secondary);
-            font-size: 17px;
+        .modal-box-advanced .modal-title {
+            color: var(--gold-primary);
+            font-size: 18px;
             font-weight: 700;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-            padding-bottom: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .modal-box.study-modal-box input,
-        .modal-box.study-modal-box textarea {
+        .modal-box-advanced input,
+        .modal-box-advanced textarea {
             width: 100%;
             padding: 12px 14px;
             background: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
-            color: #fff;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
             font-size: 14px;
             outline: none;
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
             font-family: 'Tajawal', sans-serif;
         }
 
-        .modal-box.study-modal-box input:focus,
-        .modal-box.study-modal-box textarea:focus {
+        .modal-box-advanced input:focus,
+        .modal-box-advanced textarea:focus {
             border-color: var(--gold-primary);
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.06);
+            box-shadow: var(--gold-glow);
         }
 
-        .modal-box.study-modal-box textarea {
-            resize: vertical;
-            min-height: 70px;
+        .modal-box-advanced textarea { resize: vertical; min-height: 70px; }
+
+        .modal-box-advanced .file-upload-area {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        .modal-actions {
+        .modal-box-advanced .file-upload-area label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .modal-box-advanced .file-upload-area input[type="file"] {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px dashed var(--glass-border);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .modal-actions-advanced {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
             margin-top: 6px;
         }
 
-        .glass-btn {
-            padding: 10px 24px;
+        .btn-modal {
+            padding: 10px 28px;
             border: none;
-            border-radius: 12px;
+            border-radius: var(--radius-sm);
             font-weight: 700;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition-smooth);
             font-family: 'Tajawal', sans-serif;
         }
 
-        .glass-btn.primary-btn {
+        .btn-modal:hover { transform: translateY(-2px); }
+
+        .btn-modal.btn-confirm {
             background: var(--gold-grad);
-            color: #060d18;
+            color: #0a0f1e;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
+        }
+        .btn-modal.btn-confirm:hover { box-shadow: 0 8px 35px rgba(212, 175, 55, 0.35); }
+
+        .btn-modal.btn-cancel {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+        }
+        .btn-modal.btn-cancel:hover {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
         }
 
-        .glass-btn.primary-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.25);
-        }
-
-        .glass-btn.danger-btn {
-            background: rgba(255, 71, 87, 0.15);
-            color: #ff4757;
-            border: 1px solid rgba(255, 71, 87, 0.15);
-        }
-
-        .glass-btn.danger-btn:hover {
-            background: rgba(255, 71, 87, 0.25);
-        }
-
-        .file-input-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .file-input-wrapper label {
-            color: var(--text-muted);
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .file-input-wrapper input[type="file"] {
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.25);
-            border: 1px dashed rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            color: var(--text-muted);
-            font-size: 12px;
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        /* ====== شريط التقدم العام ====== */
-        .progress-bar-container {
-            display: none;
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 6px;
-        }
-
-        .progress-bar-container.active {
-            display: block;
-        }
-
-        .progress-bar-container .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--gold-grad);
-            border-radius: 4px;
-            transition: width 0.4s ease;
-        }
-
-        /* ====== نافذة تحميل الملفات ====== */
-        .upload-progress-overlay {
+        /* ============================================================
+           📤 نافذة تحميل الملفات
+           ============================================================ */
+        .upload-overlay-advanced {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(4, 10, 18, 0.9);
-            backdrop-filter: blur(20px);
+            background: rgba(4, 10, 18, 0.92);
+            backdrop-filter: blur(30px);
             display: none;
             justify-content: center;
             align-items: center;
@@ -784,51 +1060,33 @@
             padding: 20px;
         }
 
-        .upload-progress-overlay.active {
-            display: flex;
-        }
+        .upload-overlay-advanced.active { display: flex; }
 
-        .upload-progress-box {
+        .upload-box-advanced {
             width: 100%;
             max-width: 400px;
-            background: rgba(12, 25, 45, 0.8);
-            border: 1px solid rgba(212, 175, 55, 0.15);
-            border-radius: 24px;
-            padding: 30px 24px;
+            background: var(--primary-surface);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
+            padding: 32px 24px;
             text-align: center;
-            backdrop-filter: blur(30px);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            box-shadow: var(--shadow-card);
         }
 
-        .upload-progress-box .upload-icon {
-            font-size: 48px;
-            display: block;
-            margin-bottom: 12px;
-        }
+        .upload-box-advanced .upload-icon { font-size: 48px; display: block; margin-bottom: 12px; }
+        .upload-box-advanced .upload-title { color: var(--text-primary); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .upload-box-advanced .upload-status { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; }
 
-        .upload-progress-box .upload-title {
-            color: #fff;
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .upload-progress-box .upload-status {
-            color: var(--text-muted);
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-
-        .upload-progress-box .upload-progress-track {
+        .upload-box-advanced .upload-track {
             width: 100%;
             height: 6px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255,255,255,0.06);
             border-radius: 6px;
             overflow: hidden;
             margin-bottom: 8px;
         }
 
-        .upload-progress-box .upload-progress-track .upload-progress-fill {
+        .upload-box-advanced .upload-track .upload-fill {
             height: 100%;
             width: 0%;
             background: var(--gold-grad);
@@ -836,825 +1094,480 @@
             transition: width 0.3s ease;
         }
 
-        .upload-progress-box .upload-progress-text {
-            color: var(--text-gold);
+        .upload-box-advanced .upload-percent {
+            color: var(--gold-primary);
             font-size: 14px;
             font-weight: 700;
         }
 
-        .upload-progress-box .upload-file-name {
-            color: var(--text-dim);
+        .upload-box-advanced .upload-filename {
+            color: var(--text-muted);
             font-size: 12px;
             margin-top: 8px;
             word-break: break-word;
         }
 
-        /* ====== نافذة معاينة الملف ====== */
-        .file-preview-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(4, 10, 18, 0.95);
-            backdrop-filter: blur(30px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 5000;
-            padding: 20px;
+        /* ============================================================
+           🩺 نافذة التشخيص
+           ============================================================ */
+        .diagnostics-modal-advanced .modal-content {
+            background: var(--primary-surface);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
+            width: 90%;
+            max-width: 480px;
+            padding: 24px;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-card);
         }
 
-        .file-preview-overlay.active {
-            display: flex;
-        }
-
-        .file-preview-box {
-            width: 100%;
-            max-width: 800px;
-            max-height: 90vh;
-            background: rgba(12, 25, 45, 0.8);
-            border: 1px solid rgba(212, 175, 55, 0.15);
-            border-radius: 24px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            overflow: hidden;
-        }
-
-        .file-preview-box .preview-header {
+        .diagnostics-modal-advanced .modal-content .diag-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
         }
 
-        .file-preview-box .preview-header h4 {
-            color: var(--gold-secondary);
+        .diagnostics-modal-advanced .modal-content .diag-header h3 {
+            margin: 0;
+            color: var(--info);
             font-size: 16px;
-            margin: 0;
-        }
-
-        .file-preview-box .preview-close-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #fff;
-            padding: 6px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.3s ease;
-        }
-
-        .file-preview-box .preview-close-btn:hover {
-            background: #ff4757;
-            border-color: #ff4757;
-        }
-
-        .file-preview-box .preview-content {
-            flex: 1;
-            overflow: auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 300px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            padding: 10px;
-        }
-
-        .file-preview-box .preview-content img {
-            max-width: 100%;
-            max-height: 60vh;
-            border-radius: 8px;
-        }
-
-        .file-preview-box .preview-content iframe {
-            width: 100%;
-            height: 60vh;
-            border: none;
-            border-radius: 8px;
-        }
-
-        .file-preview-box .preview-content .preview-loading {
-            color: var(--text-dim);
-            font-size: 14px;
-        }
-
-        .file-preview-box .preview-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .file-preview-box .preview-actions .preview-download-btn {
-            background: var(--gold-grad);
-            color: #060d18;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 13px;
-            transition: all 0.3s ease;
-        }
-
-        .file-preview-box .preview-actions .preview-download-btn:hover {
-            transform: scale(1.02);
-        }
-
-        /* ====== قائمة الضغط المطول ====== */
-        .long-press-menu {
-            position: fixed;
-            background: rgba(12, 25, 45, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--gold-primary);
-            border-radius: 14px;
-            padding: 8px 0;
-            z-index: 4000;
-            min-width: 180px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            display: none;
-        }
-
-        .long-press-menu .menu-item {
-            padding: 10px 18px;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 13px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            border: none;
+            gap: 8px;
+        }
+
+        .diagnostics-modal-advanced .modal-content .diag-header button {
             background: none;
-            width: 100%;
-            text-align: right;
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        .long-press-menu .menu-item:hover {
-            background: rgba(212, 175, 55, 0.1);
-        }
-
-        .long-press-menu .menu-item.danger {
-            color: #ff4757;
-        }
-
-        .long-press-menu .menu-item.danger:hover {
-            background: rgba(255, 71, 87, 0.1);
-        }
-
-        /* ====== نظام الإشعارات ====== */
-        .notif-bell-btn {
-            position: fixed;
-            bottom: 80px;
-            left: 20px;
-            z-index: 999;
-            background: linear-gradient(135deg, #d4af37, #f5d76e);
             border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            font-size: 24px;
+            color: var(--text-muted);
+            font-size: 20px;
             cursor: pointer;
-            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0a192f;
-            font-weight: 700;
-            position: relative;
+            padding: 4px 8px;
         }
 
-        .notif-bell-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .notif-badge {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            background: #ef4444;
-            color: #fff;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            font-size: 11px;
-            font-weight: 700;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #0a192f;
-        }
-
-        .notifications-panel {
-            position: fixed;
-            top: 0;
-            right: -100%;
-            width: 100%;
-            max-width: 400px;
-            height: 100vh;
-            background: rgba(10, 25, 47, 0.98);
-            backdrop-filter: blur(20px);
-            z-index: 10001;
-            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid rgba(212, 175, 55, 0.1);
-        }
-
-        .notifications-panel.open {
-            right: 0;
-        }
-
-        .notifications-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 10000;
-            display: none;
-            backdrop-filter: blur(4px);
-        }
-
-        .notifications-overlay.open {
-            display: block;
-        }
-
-        .panel-header {
-            padding: 20px 20px 16px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        .diagnostics-modal-advanced .modal-content .diag-item {
+            background: rgba(255,255,255,0.02);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-shrink: 0;
+            border: 1px solid var(--glass-border);
         }
 
-        .panel-header .header-title {
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-label {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-label .diag-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-status {
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-status.online { color: var(--success); }
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-status.offline { color: var(--danger); }
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-status.warning { color: #f59e0b; }
+
+        .diagnostics-modal-advanced .modal-content .storage-section {
+            background: rgba(255,255,255,0.02);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--glass-border);
+            margin-bottom: 10px;
+        }
+
+        .diagnostics-modal-advanced .modal-content .storage-section .storage-header {
             display: flex;
-            align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            margin-bottom: 6px;
         }
 
-        .panel-header .header-title span {
-            font-size: 22px;
+        .diagnostics-modal-advanced .modal-content .storage-section .storage-header span {
+            font-weight: 600;
+            font-size: 13px;
         }
 
-        .panel-header .header-title h3 {
-            color: #fff;
-            margin: 0;
-            font-size: 18px;
+        .diagnostics-modal-advanced .modal-content .storage-section .storage-bar {
+            background: rgba(255,255,255,0.06);
+            height: 6px;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 6px;
         }
 
-        .panel-header .header-title .count-badge {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            padding: 2px 10px;
-            border-radius: 20px;
+        .diagnostics-modal-advanced .modal-content .storage-section .storage-bar .storage-fill {
+            height: 100%;
+            background: var(--gold-grad);
+            border-radius: 6px;
+            transition: width 0.6s ease;
+        }
+
+        .diagnostics-modal-advanced .modal-content .storage-section .storage-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .diagnostics-modal-advanced .modal-content .btn-clear-cache {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border-radius: var(--radius-sm);
+            padding: 10px;
             font-size: 12px;
             font-weight: 600;
-        }
-
-        .panel-header .header-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .panel-header .header-actions .mark-read-btn {
-            background: rgba(255,255,255,0.05);
-            border: none;
-            color: #94a3b8;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            cursor: pointer;
-            font-weight: 600;
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        .panel-header .header-actions .close-btn {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 22px;
-            cursor: pointer;
-            padding: 0 4px;
-        }
-
-        .notifications-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px 16px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .notif-item {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.03);
-            border-radius: 12px;
-            padding: 12px 14px;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .notif-item.unread {
-            background: rgba(212, 175, 55, 0.05);
-            border-color: rgba(212, 175, 55, 0.15);
-        }
-
-        .notif-item .notif-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .notif-item .notif-row .notif-icon {
-            font-size: 20px;
-        }
-
-        .notif-item .notif-row .notif-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .notif-item .notif-row .notif-content .notif-title-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .notif-item .notif-row .notif-content .notif-title-row .notif-title {
-            color: #fff;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .notif-item .notif-row .notif-content .notif-title-row .unread-dot {
-            background: #ef4444;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .notif-item .notif-row .notif-content .notif-message {
-            color: #94a3b8;
-            font-size: 13px;
-            line-height: 1.5;
-            margin-top: 2px;
-        }
-
-        .notif-item .notif-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .notif-item .notif-footer .notif-time {
-            color: #64748b;
-            font-size: 11px;
-        }
-
-        .notif-item .notif-footer .notif-actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .notif-item .notif-footer .notif-actions .goto-btn {
-            background: rgba(212, 175, 55, 0.15);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            color: #d4af37;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        .notif-item .notif-footer .notif-actions .goto-btn:hover {
-            background: rgba(212, 175, 55, 0.25);
-        }
-
-        .notif-item .notif-footer .notif-actions .read-tag {
-            color: #64748b;
-            font-size: 10px;
-        }
-
-        .notif-empty {
-            text-align: center;
-            color: #64748b;
-            padding: 40px 20px;
-            font-size: 14px;
-        }
-
-        .notif-empty .empty-icon {
-            font-size: 32px;
-            display: block;
-            margin-bottom: 12px;
-        }
-
-        .panel-footer {
-            padding: 12px 20px 20px;
-            border-top: 1px solid rgba(255,255,255,0.04);
-            flex-shrink: 0;
-            display: flex;
-            gap: 10px;
-        }
-
-        .panel-footer .clear-btn {
-            flex: 1;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
             cursor: pointer;
             font-family: 'Tajawal', sans-serif;
+            transition: var(--transition-smooth);
+            margin-top: 4px;
         }
 
-        .panel-footer .clear-btn:hover {
+        .diagnostics-modal-advanced .modal-content .btn-clear-cache:hover {
             background: rgba(239, 68, 68, 0.2);
         }
 
-        /* ====== نافذة حالة النظام ====== */
-        #diagnosticsModal .modal-content {
-            background: #0f172a;
-            border: 1px solid #1e293b;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 480px;
-            padding: 20px;
-            color: #f8fafc;
-            direction: rtl;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        .diagnostics-modal-advanced .modal-content .btn-refresh-diag {
+            width: 100%;
+            background: var(--gold-grad);
+            color: #0a0f1e;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Tajawal', sans-serif;
+            transition: var(--transition-smooth);
+            margin-top: 8px;
         }
 
-        /* ====== استجابة للشاشات الصغيرة ====== */
-        @media (max-width: 480px) {
-            .study-container {
-                padding: 8px;
-                gap: 12px;
-            }
+        .diagnostics-modal-advanced .modal-content .btn-refresh-diag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.25);
+        }
+
+        /* ============================================================
+           📱 استجابة للشاشات الصغيرة
+           ============================================================ */
+        @media (max-width: 560px) {
+            body { padding: 8px; }
+            .study-container { gap: 10px; padding-bottom: 80px; }
 
             #foldersGrid {
-                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
                 gap: 10px;
             }
 
-            .folder-card {
-                padding: 14px 10px;
-                min-height: 100px;
-            }
+            .folder-card-advanced { padding: 14px 10px; min-height: 110px; }
+            .folder-card-advanced .folder-icon-large { font-size: 30px; }
+            .folder-card-advanced .folder-name { font-size: 12px; }
 
-            .folder-card .folder-icon-big {
-                font-size: 26px;
-            }
+            .post-card-advanced { padding: 12px 8px; min-height: 140px; }
+            .post-card-advanced .post-title { font-size: 12px; }
 
-            .folder-card .folder-name1 {
-                font-size: 14px;
-            }
+            .folder-header-advanced .folder-title h2 { font-size: 16px; }
+            .folder-header-advanced .folder-title .title-icon { font-size: 22px; }
 
-            .breadcrumb-bar {
-                font-size: 11px;
-                padding: 10px 14px;
-                gap: 4px 6px;
-            }
+            .btn-action { padding: 6px 12px; font-size: 11px; }
+            .btn-notification { padding: 6px 10px; font-size: 12px; min-width: 36px; }
+            .btn-notification .notif-badge-inline { width: 18px; height: 18px; font-size: 8px; top: -5px; right: -5px; }
 
-            .folder-header h3 {
-                font-size: 15px;
-            }
+            .breadcrumb-advanced { font-size: 11px; padding: 8px 12px; gap: 2px 6px; }
+            .search-bar-advanced { padding: 8px 12px; }
+            .search-bar-advanced input { font-size: 12px; }
 
-            .btn-add-folder, .btn-add-post {
-                font-size: 11px;
-                padding: 6px 12px;
-            }
+            .status-bar { font-size: 10px; padding: 6px 12px; flex-wrap: wrap; gap: 4px; }
+            .storage-indicator .storage-bar { width: 30px; }
 
-            .file-preview-box {
-                padding: 14px;
-            }
-
-            .file-preview-box .preview-content {
-                min-height: 200px;
-            }
-
-            .search-bar input {
-                font-size: 12px;
-            }
-
-            .upload-progress-box {
-                padding: 20px 16px;
-            }
-
-            .upload-progress-box .upload-icon {
-                font-size: 36px;
-            }
-
-            .notif-bell-btn {
-                width: 48px;
-                height: 48px;
-                font-size: 20px;
-                bottom: 70px;
-                left: 16px;
-            }
-
-            .notifications-panel {
-                max-width: 100%;
-            }
-
-            .modal-box.study-modal-box {
-                padding: 20px 16px;
-            }
+            .notifications-panel-advanced { max-width: 100%; right: -100%; }
+            .modal-box-advanced { padding: 20px 16px; }
+            .diagnostics-modal-advanced .modal-content { padding: 16px; }
         }
 
-        @media (max-width: 380px) {
+        @media (max-width: 400px) {
             #foldersGrid {
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
                 gap: 8px;
             }
 
-            .folder-card {
-                padding: 10px 6px;
-                min-height: 80px;
-            }
+            .folder-card-advanced { padding: 10px 6px; min-height: 90px; }
+            .folder-card-advanced .folder-icon-large { font-size: 24px; }
+            .folder-card-advanced .folder-name { font-size: 11px; }
 
-            .folder-card .folder-icon-big {
-                font-size: 22px;
-            }
+            .post-card-advanced { padding: 10px 6px; min-height: 120px; }
+            .post-card-advanced .post-title { font-size: 11px; }
+            .post-card-advanced .post-actions .doc-btn { font-size: 9px; padding: 3px 10px; }
 
-            .folder-card .folder-name1 {
-                font-size: 12px;
-            }
+            .action-buttons-group .btn-action { padding: 4px 10px; font-size: 10px; gap: 4px; }
+            .btn-notification { padding: 4px 8px; font-size: 11px; min-width: 32px; }
+            .btn-notification .notif-badge-inline { width: 16px; height: 16px; font-size: 7px; top: -4px; right: -4px; }
 
-            .action-btns-row .btn {
-                font-size: 10px;
-                padding: 4px 10px;
-            }
+            .folder-header-advanced .folder-title h2 { font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
+<!-- ============================================================
+     📱 التطبيق الرئيسي
+     ============================================================ -->
 <div class="study-container" id="studyApp">
+
+    <!-- ====== شريط الحالة العلوي ====== -->
+    <div class="status-bar" id="statusBar">
+        <div class="status-left">
+            <span>
+                <span class="status-dot" id="connectionDot"></span>
+                <span id="connectionText">جاري الاتصال...</span>
+            </span>
+            <span id="userDisplay" style="font-size:11px;color:var(--text-muted);">👤 زائر</span>
+        </div>
+        <div class="status-right">
+         <div class="storage-indicator" id="storageIndicator" onclick="openSystemDiagnosticsModal()" style="cursor: pointer;">
+    <span>💾</span>
+    <div class="storage-bar">
+        <div class="storage-fill" id="storageFill" style="width:0%;"></div>
+    </div>
+    <span id="storagePercent" style="font-size:10px;font-weight:600;">0%</span>
+
+            </div>
+        </div>
+    </div>
+
     <!-- ====== شريط البحث ====== -->
-    <div class="search-bar" id="searchBar">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="ابحث عن مجلد أو منشور..." oninput="handleSearch(this.value)">
-        <span class="search-clear" id="searchClear" onclick="clearSearch()">✕</span>
+    <div class="search-wrapper">
+        <div class="search-bar-advanced" id="searchBar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="ابحث عن مجلد أو منشور..." oninput="handleSearch(this.value)">
+            <span class="search-clear" id="searchClear" onclick="clearSearch()">✕</span>
+        </div>
+        <div class="search-results-dropdown" id="searchResults"></div>
     </div>
 
-    <!-- ====== نتائج البحث ====== -->
-    <div class="search-results" id="searchResults"></div>
-
-    <!-- ====== زر فتح شاشة حالة النظام ====== -->
-    <button onclick="openSystemDiagnosticsModal()" class="doc-btn" style="background: #0f172a; color: #38bdf8; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: fit-content;">
-        📊 حالة النظام والموارد
-    </button>
-
-    <!-- ====== شريط المسار (Breadcrumb) ====== -->
-    <div class="breadcrumb-bar" id="breadcrumbBar">
-        <span class="crumb" data-path="root" onclick="navigateTo('root')">🏠 المواد الدراسية</span>
+    <!-- ====== شريط التنقل ====== -->
+    <div class="breadcrumb-advanced" id="breadcrumbBar">
+        <span class="crumb current" data-path="root" onclick="navigateTo('root')">🏠 المواد الدراسية</span>
     </div>
 
-    <!-- ====== رأس الصفحة ====== -->
-    <div class="folder-header" id="folderHeader">
-        <h3>
-            <span class="folder-icon">📂</span>
-            <span id="currentFolderTitle">المواد الدراسية</span>
-        </h3>
-        <div class="action-btns-row">
-            <button class="btn-home-return" onclick="goHome()">🏠 الرئيسية</button>
-            <button class="btn-back" id="btnBack" onclick="goBack()" style="display:none;">↩️ رجوع</button>
-            <button class="btn-refresh" id="btnRefreshData" onclick="refreshData()">🔄 تحديث</button>
-            <button class="btn-add-folder" id="btnAddFolder" onclick="openCreateFolderModal()" style="display:none;">➕ مجلد</button>
-            <button class="btn-add-post" id="btnAddPost" onclick="openCreatePostModal()" style="display:none;">📝 إدراج</button>
+    <!-- ====== رأس المجلد مع زر الإشعارات ====== -->
+    <div class="folder-header-advanced" id="folderHeader">
+        <div class="folder-title">
+            <span class="title-icon">📂</span>
+            <h2 id="currentFolderTitle">المواد الدراسية</h2>
+            <span class="folder-count-badge" id="itemCount">0</span>
+<button class="btn-notification" id="notifTrigger" onclick="toggleNotificationsPanel()" aria-label="الإشعارات">
+                🔔
+                <span class="notif-badge-inline" id="notifBadge">0</span>
+            </button>
+        </div>
+        
+        <div class="action-buttons-group">
+            <!-- ====== 🔔 زر الإشعارات (ضمن الأزرار) ====== -->
+            
+
+            <button class="btn-action btn-secondary" onclick="goHome()">🏠 الرئيسية</button>
+            <button class="btn-action btn-secondary" id="btnBack" onclick="goBack()" style="display:none;">↩️ رجوع</button>
+            <button class="btn-action btn-info" id="btnRefreshData" onclick="refreshData()">🔄 تحديث</button>
+            <button class="btn-action btn-primary" id="btnAddFolder" onclick="openCreateFolderModal()" style="display:none;">➕ مجلد</button>
+            <button class="btn-action btn-success" id="btnAddPost" onclick="openCreatePostModal()" style="display:none;">📝 إدراج</button>
         </div>
     </div>
 
-    <!-- ====== زر الإشعارات ====== -->
-    <button class="notif-bell-btn" onclick="toggleNotificationsPanel()" aria-label="الإشعارات">
-        🔔
-        <span class="notif-badge" id="notifBadge">0</span>
-    </button>
-
-    <!-- ====== نافذة الإشعارات المنبثقة ====== -->
-    <div class="notifications-overlay" id="notificationsOverlay" onclick="toggleNotificationsPanel()"></div>
-    <div class="notifications-panel" id="notificationsPanel">
-        <div class="panel-header">
-            <div class="header-title">
-                <span>🔔</span>
-                <h3>الإشعارات</h3>
-                <span class="count-badge" id="notifCountDisplay">0</span>
-            </div>
-            <div class="header-actions">
-                <button class="mark-read-btn" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
-                <button class="close-btn" onclick="toggleNotificationsPanel()">✕</button>
-            </div>
-        </div>
-
-        <div class="notifications-list" id="notificationsList">
-            <div class="notif-empty">
-                <span class="empty-icon">📭</span>
-                لا توجد إشعارات جديدة
-            </div>
-        </div>
-
-        <div class="panel-footer">
-            <button class="clear-btn" onclick="clearAllNotifications()">🗑️ مسح جميع الإشعارات</button>
-        </div>
-    </div>
-
-    <!-- ====== شبكة المجلدات والمنشورات ====== -->
-    <div id="foldersContainer">
-        <div class="folders-grid" id="foldersGrid"></div>
-    </div>
-
-    <!-- ====== قائمة المنشورات (قديمة - محفوظة للتوافق) ====== -->
-    <div id="postsContainer" style="display:none;">
-        <div class="posts-list" id="postsList"></div>
-    </div>
+    <!-- ====== شبكة المحتوى ====== -->
+    <div id="foldersGrid"></div>
 
     <!-- ====== شريط التقدم ====== -->
-    <div class="progress-bar-container" id="progressContainer">
-        <div class="progress-bar" id="progressBar"></div>
+    <div class="progress-bar-container" id="progressContainer" style="display:none; width:100%; height:4px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin-top:4px;">
+        <div class="progress-bar" id="progressBar" style="height:100%; width:0%; background:var(--gold-grad); border-radius:4px; transition:width 0.4s ease;"></div>
     </div>
 </div>
 
-<!-- ====== نافذة إنشاء مجلد ====== -->
-<div class="modal-overlay study-modal" id="createFolderModal">
-    <div class="modal-box study-modal-box">
-        <h3>📁 إنشاء مجلد جديد</h3>
+<!-- ============================================================
+     📋 لوحة الإشعارات
+     ============================================================ -->
+<div class="notif-overlay-advanced" id="notificationsOverlay" onclick="toggleNotificationsPanel()"></div>
+<div class="notifications-panel-advanced" id="notificationsPanel">
+    <div class="panel-header-advanced">
+        <div class="header-left">
+            <span class="bell-icon">🔔</span>
+            <h3>الإشعارات</h3>
+            <span class="unread-count" id="notifCountDisplay">0</span>
+        </div>
+        <div class="header-right">
+            <button onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button>
+            <button class="close-panel" onclick="toggleNotificationsPanel()">✕</button>
+        </div>
+    </div>
+
+    <div class="notif-list-advanced" id="notificationsList">
+        <div class="notif-empty-advanced">
+            <span class="empty-icon">📭</span>
+            لا توجد إشعارات جديدة
+        </div>
+    </div>
+
+    <div class="panel-footer-advanced">
+        <button class="clear-btn" onclick="clearAllNotifications()">🗑️ مسح جميع الإشعارات</button>
+    </div>
+</div>
+
+<!-- ============================================================
+     🪟 النوافذ المنبثقة
+     ============================================================ -->
+
+<!-- ====== إنشاء مجلد ====== -->
+<div class="modal-overlay-advanced" id="createFolderModal">
+    <div class="modal-box-advanced">
+        <div class="modal-title">📁 إنشاء مجلد جديد</div>
         <input type="text" id="newFolderName" placeholder="أدخل اسم المجلد...">
         <input type="text" id="newFolderDescription" placeholder="وصف المجلد (اختياري)...">
-        <div class="modal-actions">
-            <button class="glass-btn primary-btn" onclick="confirmCreateFolder()">إنشاء</button>
-            <button class="glass-btn danger-btn" onclick="closeModal('createFolderModal')">إلغاء</button>
+        <div class="modal-actions-advanced">
+            <button class="btn-modal btn-confirm" onclick="confirmCreateFolder()">إنشاء</button>
+            <button class="btn-modal btn-cancel" onclick="closeModal('createFolderModal')">إلغاء</button>
         </div>
     </div>
 </div>
 
-<!-- ====== نافذة تعديل مجلد ====== -->
-<div class="modal-overlay study-modal" id="editFolderModal">
-    <div class="modal-box study-modal-box">
-        <h3>✏️ تعديل اسم المجلد</h3>
+<!-- ====== تعديل مجلد ====== -->
+<div class="modal-overlay-advanced" id="editFolderModal">
+    <div class="modal-box-advanced">
+        <div class="modal-title">✏️ تعديل المجلد</div>
         <input type="text" id="editFolderName" placeholder="أدخل الاسم الجديد...">
         <input type="text" id="editFolderDescription" placeholder="وصف المجلد (اختياري)...">
-        <div class="modal-actions">
-            <button class="glass-btn primary-btn" onclick="confirmEditFolder()">تعديل</button>
-            <button class="glass-btn danger-btn" onclick="closeModal('editFolderModal')">إلغاء</button>
+        <div class="modal-actions-advanced">
+            <button class="btn-modal btn-confirm" onclick="confirmEditFolder()">تعديل</button>
+            <button class="btn-modal btn-cancel" onclick="closeModal('editFolderModal')">إلغاء</button>
         </div>
     </div>
 </div>
 
-<!-- ====== نافذة إنشاء منشور ====== -->
-<div class="modal-overlay study-modal" id="createPostModal">
-    <div class="modal-box study-modal-box">
-        <h3>📝 إدراج منشور جديد</h3>
+<!-- ====== إنشاء منشور ====== -->
+<div class="modal-overlay-advanced" id="createPostModal">
+    <div class="modal-box-advanced">
+        <div class="modal-title">📝 إدراج منشور جديد</div>
         <input type="text" id="newPostTitle" placeholder="عنوان المنشور...">
         <textarea id="newPostText" placeholder="تفاصيل المنشور..."></textarea>
-        <div class="file-input-wrapper">
+        <div class="file-upload-area">
             <label>📎 إرفاق ملف (صورة / PDF / مستند):</label>
             <input type="file" id="newPostFile" accept="image/*,application/pdf,.doc,.docx,.txt">
         </div>
-        <div class="modal-actions">
-            <button class="glass-btn primary-btn" onclick="confirmCreatePost()">نشر</button>
-            <button class="glass-btn danger-btn" onclick="closeModal('createPostModal')">إلغاء</button>
+        <div class="modal-actions-advanced">
+            <button class="btn-modal btn-confirm" onclick="confirmCreatePost()">نشر</button>
+            <button class="btn-modal btn-cancel" onclick="closeModal('createPostModal')">إلغاء</button>
         </div>
     </div>
 </div>
 
-<!-- ====== نافذة تعديل منشور ====== -->
-<div class="modal-overlay study-modal" id="editPostModal">
-    <div class="modal-box study-modal-box">
-        <h3>✏️ تعديل المنشور</h3>
+<!-- ====== تعديل منشور ====== -->
+<div class="modal-overlay-advanced" id="editPostModal">
+    <div class="modal-box-advanced">
+        <div class="modal-title">✏️ تعديل المنشور</div>
         <input type="text" id="editPostTitle" placeholder="عنوان المنشور...">
         <textarea id="editPostText" placeholder="تفاصيل المنشور..."></textarea>
-        <div class="file-input-wrapper">
+        <div class="file-upload-area">
             <label>📎 تغيير الملف (اختياري):</label>
             <input type="file" id="editPostFile" accept="image/*,application/pdf,.doc,.docx,.txt">
         </div>
-        <div class="modal-actions">
-            <button class="glass-btn primary-btn" onclick="confirmEditPost()">تعديل</button>
-            <button class="glass-btn danger-btn" onclick="closeModal('editPostModal')">إلغاء</button>
+        <div class="modal-actions-advanced">
+            <button class="btn-modal btn-confirm" onclick="confirmEditPost()">تعديل</button>
+            <button class="btn-modal btn-cancel" onclick="closeModal('editPostModal')">إلغاء</button>
         </div>
     </div>
 </div>
 
-<!-- ====== نافذة معاينة الملف ====== -->
-<div class="file-preview-overlay" id="filePreviewOverlay">
-    <div class="file-preview-box">
-        <div class="preview-header">
-            <h4 id="previewTitle">📄 معاينة الملف</h4>
-            <button class="preview-close-btn" onclick="closeFilePreview()">✕ إغلاق</button>
-        </div>
-        <div class="preview-content" id="previewContent">
-            <div class="preview-loading">⏳ جاري تحميل الملف...</div>
-        </div>
-        <div class="preview-actions">
-            <button class="preview-download-btn" id="previewDownloadBtn" onclick="downloadPreviewFile()">⬇️ تحميل الملف</button>
-        </div>
-    </div>
-</div>
-
-<!-- ====== نافذة تحميل الملفات (عجلة التحميل) ====== -->
-<div class="upload-progress-overlay" id="uploadProgressOverlay">
-    <div class="upload-progress-box">
+<!-- ============================================================
+     📤 نافذة تحميل الملفات
+     ============================================================ -->
+<div class="upload-overlay-advanced" id="uploadProgressOverlay">
+    <div class="upload-box-advanced">
         <span class="upload-icon" id="uploadIcon">📤</span>
         <div class="upload-title" id="uploadTitle">جاري رفع الملف...</div>
         <div class="upload-status" id="uploadStatusText">⏳ جاري رفع الملف...</div>
-        <div class="upload-progress-track">
-            <div class="upload-progress-fill" id="uploadProgressBar" style="width: 0%;"></div>
+        <div class="upload-track">
+            <div class="upload-fill" id="uploadProgressBar" style="width:0%;"></div>
         </div>
-        <div class="upload-progress-text" id="uploadProgressText">0%</div>
-        <div class="upload-file-name" id="uploadFileName"></div>
+        <div class="upload-percent" id="uploadProgressText">0%</div>
+        <div class="upload-filename" id="uploadFileName"></div>
     </div>
 </div>
 
-<!-- ====== نافذة حالة النظام ====== -->
-<div id="diagnosticsModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center;">
+<!-- ============================================================
+     🩺 نافذة التشخيص
+     ============================================================ -->
+<div class="modal-overlay-advanced diagnostics-modal-advanced" id="diagnosticsModal">
     <div class="modal-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 15px;">
-            <h3 style="margin: 0; color: #38bdf8; font-size: 16px; display: flex; align-items: center; gap: 8px;">📊 تقرير حالة الموارد والسيرفرات</h3>
-            <button onclick="document.getElementById('diagnosticsModal').style.display='none'" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 5px 10px; line-height: 1;">✕</button>
+        <div class="diag-header">
+            <h3>📊 تقرير حالة الموارد والسيرفرات</h3>
+            <button onclick="document.getElementById('diagnosticsModal').style.display='none'">✕</button>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
-            <div style="background: #1e293b; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-weight: 700;">🚀 سيرفر الرفع (Render)</div>
-                    <div style="font-size: 11px; color: #94a3b8;">استجابة السيرفر وزمن الاتصال</div>
-                </div>
-                <div style="text-align: left;">
-                    <span id="diag-render-status" style="font-weight: 700; color: #eab308;">⏳ فحص...</span>
-                    <div id="diag-render-ping" style="font-size: 10px; color: #94a3b8;">-</div>
-                </div>
+        <div class="diag-item">
+            <div>
+                <div class="diag-label">🚀 سيرفر الرفع <span class="diag-sub">(Render)</span></div>
             </div>
-
-            <div style="background: #1e293b; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-weight: 700;">🔥 قاعدة البيانات (Firebase DB)</div>
-                    <div style="font-size: 11px; color: #94a3b8;">حالة الاتصال المباشر بالحساب</div>
-                </div>
-                <div>
-                    <span id="diag-firebase-status" style="font-weight: 700; color: #eab308;">⏳ فحص...</span>
-                </div>
-            </div>
-
-            <div style="background: #1e293b; padding: 12px; border-radius: 10px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="font-weight: 700;">💾 ذاكرة هاتف الطالب (IndexedDB)</span>
-                    <span id="diag-storage-percent" style="font-weight: 700; color: #38bdf8;">0%</span>
-                </div>
-                <div style="background: rgba(255,255,255,0.1); height: 6px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
-                    <div id="diag-storage-bar" style="width: 0%; background: #38bdf8; height: 100%; transition: width 0.3s;"></div>
-                </div>
-                <div style="font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span>المستغرق: <b id="diag-storage-used" style="color:#f8fafc;">0 MB</b></span>
-                    <span>المتاح بالنظام: <b id="diag-storage-quota" style="color:#f8fafc;">0 MB</b></span>
-                </div>
-
-                <button onclick="clearAppOfflineCache()" style="width: 100%; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; border-radius: 6px; padding: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: 'Tajawal', sans-serif;">
-                    🗑️ تنظيف التخزين المؤقت وتوفير المساحة
-                </button>
+            <div>
+                <span class="diag-status" id="diag-render-status">⏳ فحص...</span>
+                <div id="diag-render-ping" style="font-size:10px;color:var(--text-muted);text-align:left;">-</div>
             </div>
         </div>
 
-        <button onclick="runSystemDiagnostics()" style="margin-top: 15px; width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer; font-family: 'Tajawal', sans-serif;">
-            🔄 إعادة الفحص الآن
-        </button>
+        <div class="diag-item">
+            <div>
+                <div class="diag-label">🔥 قاعدة البيانات <span class="diag-sub">(Firebase)</span></div>
+            </div>
+            <div>
+                <span class="diag-status" id="diag-firebase-status">⏳ فحص...</span>
+            </div>
+        </div>
+
+        <div class="storage-section">
+            <div class="storage-header">
+                <span>💾 ذاكرة التخزين المحلية</span>
+                <span id="diag-storage-percent" style="font-weight:700;color:var(--info);">0%</span>
+            </div>
+            <div class="storage-bar">
+                <div class="storage-fill" id="diag-storage-bar" style="width:0%;"></div>
+            </div>
+            <div class="storage-details">
+                <span>المستخدم: <b id="diag-storage-used" style="color:var(--text-primary);">0 MB</b></span>
+                <span>السعة: <b id="diag-storage-quota" style="color:var(--text-primary);">5.0 GB</b></span>
+            </div>
+        </div>
+
+        <button class="btn-clear-cache" onclick="clearAppOfflineCache()">🗑️ تنظيف التخزين المؤقت وتوفير المساحة</button>
+        <button class="btn-refresh-diag" onclick="runSystemDiagnostics()">🔄 إعادة الفحص الآن</button>
     </div>
 </div>
 
-<!-- ====== قائمة الضغط المطول ====== -->
-<div class="long-press-menu" id="longPressMenu">
-    <button class="menu-item" onclick="editFolderFromMenu()">✏️ تعديل الاسم</button>
-    <button class="menu-item danger" onclick="deleteFolderFromMenu()">🗑️ حذف المجلد</button>
-</div>
-
-<!-- ====== Firebase SDK ====== -->
+<!-- ============================================================
+     🔗 المكتبات الخارجية
+     ============================================================ -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- ====== ملف التطبيق الرئيسي ====== -->
-<script src="study-materials.js?v=8"></script>
+<!-- ============================================================
+     📄 ملف التطبيق الرئيسي
+     ============================================================ -->
+<script src="study-materials.js?v=9"></script>
 
-<!-- ====== تسجيل Service Worker ====== -->
+<!-- ============================================================
+     ⚙️ تسجيل Service Workers
+     ============================================================ -->
 <script>
     (function registerServiceWorkers() {
         if (!('serviceWorker' in navigator)) {
@@ -1662,54 +1575,74 @@
             return;
         }
 
-        // ====== تسجيل Service Worker الأساسي ======
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => {
-                console.log('✅ Service Worker registered successfully:', reg);
-                // ✅ فقط تحديث بدون إعادة تحميل
-                reg.update();
-            })
-            .catch(err => {
-                console.error('❌ Service Worker registration failed:', err);
-            });
+            .then(reg => { console.log('✅ Service Worker registered:', reg); reg.update(); })
+            .catch(err => console.error('❌ SW registration failed:', err));
 
-        // ====== تسجيل Service Worker الخاص بـ Firebase Messaging ======
         navigator.serviceWorker.register('./firebase-messaging-sw.js')
-            .then(reg => {
-                console.log('✅ FCM Service Worker registered successfully:', reg);
-                reg.update();
-            })
-            .catch(err => {
-                console.error('❌ FCM Service Worker registration failed:', err);
-            });
+            .then(reg => { console.log('✅ FCM Service Worker registered:', reg); reg.update(); })
+            .catch(err => console.error('❌ FCM SW registration failed:', err));
 
-        // ====== مراقبة حالة Service Worker ======
         navigator.serviceWorker.ready.then(registration => {
-            console.log('📡 Service Worker ready:', registration);
-            
-            // ✅ مراقبة التحديثات بدون إعادة تحميل تلقائي
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
-                console.log('🔄 تم العثور على تحديث جديد لـ Service Worker');
-                
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // ✅ فقط نعرض إشعار للمستخدم، لا نعيد تحميل تلقائي
                         showUpdateNotification();
                     }
                 });
             });
         });
-
-        // ❌ تم حذف هذا الجزء بالكامل
-        // navigator.serviceWorker.addEventListener('controllerchange', () => {
-        //     window.location.reload();
-        // });
-
     })();
 
-    // ====== ✅ دالة عرض إشعار التحديث (بدون إعادة تحميل تلقائي) ======
+    function showUpdateNotification() {
+        const notifDiv = document.createElement('div');
+        notifDiv.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--gold-primary);
+            border-radius: 16px;
+            padding: 16px 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            z-index: 99999;
+            direction: rtl;
+            max-width: 90%;
+            text-align: center;
+            animation: slideUp 0.5s ease;
+        `;
+        notifDiv.innerHTML = `
+            <div style="color:var(--gold-primary);font-weight:700;font-size:14px;">🔄 تحديث متوفر</div>
+            <div style="color:var(--text-secondary);font-size:12px;margin-top:4px;">تم تحميل تحديث جديد للتطبيق</div>
+            <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;">
+                <button onclick="applyUpdate()" style="background:var(--gold-grad);color:#0a0f1e;border:none;border-radius:8px;padding:6px 20px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;">تحديث الآن</button>
+                <button onclick="this.parentElement.parentElement.remove()" style="background:rgba(255,255,255,0.04);color:var(--text-secondary);border:1px solid var(--glass-border);border-radius:8px;padding:6px 20px;cursor:pointer;font-family:'Tajawal',sans-serif;">تخطي</button>
+            </div>
+        `;
+        document.body.appendChild(notifDiv);
 
+        if (!document.getElementById('updateStyles')) {
+            const style = document.createElement('style');
+            style.id = 'updateStyles';
+            style.textContent = `
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    function applyUpdate() {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.waiting && registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        });
+        setTimeout(() => window.location.reload(), 500);
+    }
 </script>
 
 </body>
