@@ -894,51 +894,74 @@ function renderFolderContent(data) {
         const mediaKey = `${pathKey}_${postId}`;
 
         const rawFileName = post.fileName || post.title || 'مستند مرفق';
-        const fileExt = rawFileName.includes('.') ? rawFileName.split('.').pop() : '';
+        const fileParsed = splitFileNameAndExt(rawFileName);
+        const displayName = fileParsed.name.replace(/_/g, ' ');
+        const ext = fileParsed.ext ? fileParsed.ext.trim() : '';
+
         const fileSizeStr = post.fileSize ? formatFileSize(post.fileSize) : '';
 
         const timeFormatted = post.timestamp ? new Date(post.timestamp).toLocaleString('ar-YE', {
             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : '';
 
+        // ====== أزرار الإدارة فقط ======
         const postAdminActions = isAdmin ? `
-            <div class="post-admin-actions">
+            <div class="post-card-admin-actions">
                 <button onclick="event.stopPropagation(); openEditPostModal(${originalIndex})" title="تعديل">✏️</button>
-                <button class="btn-delete-post" onclick="event.stopPropagation(); confirmDeletePost(${originalIndex})" title="حذف">🗑️</button>
+                <button onclick="event.stopPropagation(); confirmDeletePost(${originalIndex})" title="حذف">🗑️</button>
             </div>
         ` : '';
 
+        // ====== البطاقة كاملة ======
         htmlContent += `
             <div class="post-card-advanced" id="postCard-${mediaKey}">
                 ${postAdminActions}
-                <span class="post-icon">📄</span>
-                <div class="post-title">${escapeHtml(post.title || 'بدون عنوان')}</div>
+                
+                <!-- الأيقونة -->
+                <img src="document.png" class="folder-icon-big" alt="منشور">
+                
+                <!-- العنوان -->
+                <div class="folder-name1">${escapeHtml(post.title || 'بدون عنوان')}</div>
+                
+                <!-- النص -->
                 ${(post.text || post.description) ? `
-                    <div class="post-text">${escapeHtml(post.text || post.description)}</div>
+                    <div class="post-details-text">${escapeHtml(post.text || post.description)}</div>
                 ` : ''}
+                
+                <!-- اسم الملف -->
                 ${hasFile ? `
-                    <div class="post-file-info">
-                        <span>📎 ${escapeHtml(rawFileName)}</span>
-                        ${fileExt ? `<span class="file-ext">${escapeHtml(fileExt)}</span>` : ''}
-                        ${fileSizeStr ? `<span>${fileSizeStr}</span>` : ''}
+                    <div class="file-name-container">
+                        <div class="file-name-line">📎 ${escapeHtml(displayName)}</div>
+                        ${ext ? `<div class="file-ext-badge">${escapeHtml(ext)}</div>` : ''}
                     </div>
                 ` : ''}
-                <div class="post-meta">
-                    <span>👤 ${escapeHtml(post.user || 'أدمين')}</span>
-                    ${timeFormatted ? `<span>🕒 ${timeFormatted}</span>` : ''}
+                
+                <!-- معلومات المنشور -->
+                <div class="post-meta-info">
+                    <div>👤 ${escapeHtml(post.user || 'أدمين')}</div>
+                    ${timeFormatted ? `<div>🕒 ${timeFormatted}</div>` : ''}
+                    ${fileSizeStr ? `<div style="color: #38bdf8; font-weight: 600;">💽 ${fileSizeStr}</div>` : ''}
                 </div>
+                
+                <!-- أزرار الإجراءات -->
                 ${hasFile ? `
-                    <div class="post-actions" id="actions-${mediaKey}">
-                        <button onclick="event.stopPropagation(); openStudyPreview('${pathKey}', ${originalIndex})" class="doc-btn btn-view">👁️ معاينة</button>
-                        <button onclick="event.stopPropagation(); saveStudyFileOffline('${pathKey}', ${originalIndex})" class="doc-btn btn-save" id="btnDl-${mediaKey}">💾 حفظ</button>
+                    <div class="post-square-actions" id="actions-${mediaKey}">
+                        <button onclick="event.stopPropagation(); openStudyPreview('${pathKey}', ${originalIndex})" class="doc-btn doc-btn-view">👁️ معاينة</button>
+                        <button onclick="event.stopPropagation(); saveStudyFileOffline('${pathKey}', ${originalIndex})" class="doc-btn doc-btn-download" id="btnDl-${mediaKey}">💾 حفظ</button>
                     </div>
-                    <div class="download-progress-advanced" id="pbox-${mediaKey}">
-                        <div class="progress-track"><div class="progress-fill" id="pbar-${mediaKey}" style="width:0%;"></div></div>
+                    
+                    <!-- شريط التقدم -->
+                    <div class="download-progress-box" id="pbox-${mediaKey}">
+                        <div class="progress-track">
+                            <div class="progress-fill" id="pbar-${mediaKey}" style="width:0%;"></div>
+                        </div>
                         <div class="progress-info">
                             <span id="ptext-${mediaKey}">0%</span>
                             <span id="psize-${mediaKey}"></span>
                         </div>
                     </div>
+                    
+                    <!-- شارة التخزين المحلي -->
                     <div class="offline-badge" id="offlineCheck-${mediaKey}">✅ محلياً</div>
                 ` : ''}
             </div>
@@ -963,7 +986,7 @@ function renderFolderContent(data) {
                         if (checkEl) checkEl.classList.add('visible');
                         if (btnDl) {
                             btnDl.textContent = '✅ محفوظ';
-                            btnDl.className = 'doc-btn btn-saved';
+                            btnDl.className = 'doc-btn doc-btn-saved';
                             btnDl.onclick = null;
                         }
                     }
@@ -1003,6 +1026,7 @@ function splitFileNameAndExt(fileName) {
 // ========================================================================
 function openStudyPreview(pathKey, index) {
     let post = null;
+
     if (globalPostsData && globalPostsData.posts && globalPostsData.posts[index]) {
         post = globalPostsData.posts[index];
     }
@@ -1015,7 +1039,11 @@ function openStudyPreview(pathKey, index) {
             const mimeType = post?.fileType || localData.blob.type || 'application/pdf';
             const typedBlob = new Blob([localData.blob], { type: mimeType });
             const blobUrl = URL.createObjectURL(typedBlob);
-            window.open(blobUrl, '_blank');
+
+            const newWindow = window.open(blobUrl, '_self');
+            if (!newWindow) {
+                window.location.href = blobUrl;
+            }
             return;
         }
 
@@ -1035,17 +1063,29 @@ function openStudyPreview(pathKey, index) {
             return;
         }
 
-        window.open(targetUrl, '_blank');
+        window.location.href = targetUrl;
     }).catch(err => {
         console.warn('Error retrieving from IDB:', err);
         let targetUrl = post ? (post.fileUrl || post.fileData) : null;
         if (targetUrl) {
-            window.open(targetUrl, '_blank');
+            window.location.href = targetUrl;
         } else {
             alert('❌ تعذر فتح الملف.');
         }
     });
 }
+
+function showFileInPreview(blobUrl, mimeType, post) {
+    if (blobUrl) {
+        window.location.href = blobUrl;
+    }
+}
+
+// ========================================================================
+// 5. تحميل الملف وحفظه للعمل أوفلاين مع نسبة تحميل حقيقية
+// ========================================================================
+
+
 
 // ========================================================================
 // 12. حفظ الملفات محلياً (أوفلاين)
@@ -2546,269 +2586,13 @@ function handleFolderRenameNotification(notif) {
 // ========================================================================
 // 19. نظام التشخيص
 // ========================================================================
-// ================================================================
-// 🩺 نظام التشخيص - إصلاح زر حالة النظام
-// ================================================================
-
-// دالة فتح نافذة التشخيص
 function openSystemDiagnosticsModal() {
-    console.log('📊 جاري فتح نافذة التشخيص...');
     const modal = document.getElementById('diagnosticsModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.classList.add('active');
-        // تشغيل الفحص التلقائي
-        setTimeout(() => {
-            runSystemDiagnostics();
-        }, 300);
-    } else {
-        console.error('❌ لم يتم العثور على نافذة التشخيص');
-        alert('⚠️ حدث خطأ في فتح نافذة التشخيص');
+        runSystemDiagnostics();
     }
 }
-
-// دالة إغلاق نافذة التشخيص
-function closeDiagnosticsModal() {
-    const modal = document.getElementById('diagnosticsModal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('active');
-    }
-}
-
-// دالة تشغيل فحص النظام (مطورة)
-async function runSystemDiagnostics() {
-    console.log('🔍 بدء فحص النظام...');
-    
-    const statusRender = document.getElementById('diag-render-status');
-    const pingRender = document.getElementById('diag-render-ping');
-    const statusFirebase = document.getElementById('diag-firebase-status');
-    const storageUsed = document.getElementById('diag-storage-used');
-    const storagePercent = document.getElementById('diag-storage-percent');
-    const storageBar = document.getElementById('diag-storage-bar');
-    const storageQuota = document.getElementById('diag-storage-quota');
-
-    // تحديث حالة الفحص
-    if (statusRender) {
-        statusRender.textContent = '⏳ جاري الفحص...';
-        statusRender.className = 'diag-status';
-    }
-    if (statusFirebase) {
-        statusFirebase.textContent = '⏳ جاري الفحص...';
-        statusFirebase.className = 'diag-status';
-    }
-    if (storageUsed) storageUsed.textContent = '⏳ جاري الحساب...';
-
-    // -------- 1. فحص سيرفر Render --------
-    try {
-        const startTime = performance.now();
-        const response = await fetch(`${TELEGRAM_SERVER_URL}/health`, { 
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        });
-        const ping = Math.round(performance.now() - startTime);
-        
-        if (response.ok) {
-            if (statusRender) {
-                statusRender.textContent = '✅ نشط';
-                statusRender.className = 'diag-status online';
-            }
-            if (pingRender) {
-                pingRender.textContent = `⏱️ زمن الاستجابة: ${ping}ms`;
-                pingRender.style.color = '#4ade80';
-            }
-        } else {
-            throw new Error(`HTTP ${response.status}`);
-        }
-    } catch (error) {
-        console.warn('⚠️ فشل الاتصال بسيرفر Render:', error);
-        if (statusRender) {
-            statusRender.textContent = '❌ غير متاح';
-            statusRender.className = 'diag-status offline';
-        }
-        if (pingRender) {
-            pingRender.textContent = '🚫 تعذر الاتصال';
-            pingRender.style.color = '#ef4444';
-        }
-    }
-
-    // -------- 2. فحص Firebase --------
-    try {
-        if (typeof studyDb !== 'undefined' && studyDb) {
-            const connectedRef = studyDb.ref('.info/connected');
-            connectedRef.once('value', (snap) => {
-                const isConnected = snap.val();
-                if (isConnected) {
-                    if (statusFirebase) {
-                        statusFirebase.textContent = '✅ متصل';
-                        statusFirebase.className = 'diag-status online';
-                    }
-                } else {
-                    if (statusFirebase) {
-                        statusFirebase.textContent = '⚠️ منقطع';
-                        statusFirebase.className = 'diag-status warning';
-                    }
-                }
-            });
-        } else {
-            if (statusFirebase) {
-                statusFirebase.textContent = '⚠️ غير مهيأ';
-                statusFirebase.className = 'diag-status warning';
-            }
-        }
-    } catch (error) {
-        console.warn('⚠️ فشل فحص Firebase:', error);
-        if (statusFirebase) {
-            statusFirebase.textContent = '❌ خطأ';
-            statusFirebase.className = 'diag-status offline';
-        }
-    }
-
-    // -------- 3. حساب التخزين --------
-    try {
-        const storageInfo = await calculateStorageUsage();
-        if (storageInfo) {
-            if (storageUsed) {
-                storageUsed.textContent = `${storageInfo.usedMB} MB`;
-                storageUsed.style.color = storageInfo.percent > 80 ? '#ef4444' : '#4ade80';
-            }
-            if (storagePercent) {
-                storagePercent.textContent = `${storageInfo.percent}%`;
-            }
-            if (storageBar) {
-                storageBar.style.width = `${Math.min(100, storageInfo.percent)}%`;
-                storageBar.style.background = storageInfo.percent > 80 
-                    ? 'linear-gradient(90deg, #ef4444, #f59e0b)' 
-                    : 'var(--gold-grad)';
-            }
-            if (storageQuota) {
-                storageQuota.textContent = '5.0 GB';
-            }
-        }
-    } catch (error) {
-        console.warn('⚠️ فشل حساب التخزين:', error);
-        if (storageUsed) {
-            storageUsed.textContent = '❌ تعذر الحساب';
-            storageUsed.style.color = '#ef4444';
-        }
-    }
-
-    console.log('✅ تم الانتهاء من فحص النظام');
-}
-
-// دالة حساب التخزين المستخدم
-async function calculateStorageUsage() {
-    try {
-        // حساب حجم IndexedDB
-        let idbSize = 0;
-        if (window.indexedDB) {
-            try {
-                const db = await new Promise((resolve, reject) => {
-                    const request = indexedDB.open('StudyMaterialsDB');
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-                
-                if (db.objectStoreNames.contains('media')) {
-                    const tx = db.transaction('media', 'readonly');
-                    const store = tx.objectStore('media');
-                    const allItems = await new Promise((resolve) => {
-                        const req = store.getAll();
-                        req.onsuccess = () => resolve(req.result);
-                        req.onerror = () => resolve([]);
-                    });
-                    
-                    allItems.forEach(item => {
-                        if (item.blob) {
-                            idbSize += item.blob.size || 0;
-                        }
-                        idbSize += new Blob([JSON.stringify(item)]).size;
-                    });
-                }
-                db.close();
-            } catch (e) {
-                console.warn('⚠️ فشل قراءة IndexedDB:', e);
-            }
-        }
-
-        // حساب حجم localStorage
-        let localStorageSize = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('study_cache_')) {
-                const value = localStorage.getItem(key);
-                if (value) {
-                    localStorageSize += new Blob([value]).size;
-                }
-            }
-        }
-
-        const totalUsed = idbSize + localStorageSize;
-        const totalUsedMB = (totalUsed / (1024 * 1024));
-        const quota = 5 * 1024 * 1024 * 1024; // 5 GB
-        const percent = Number(((totalUsed / quota) * 100).toFixed(1));
-
-        return {
-            usedBytes: totalUsed,
-            usedMB: totalUsedMB.toFixed(2),
-            percent: percent,
-            idbSize: idbSize,
-            localStorageSize: localStorageSize
-        };
-    } catch (error) {
-        console.error('❌ خطأ في حساب التخزين:', error);
-        return null;
-    }
-}
-
-// دالة تنظيف التخزين المؤقت
-async function clearAppOfflineCache() {
-    if (!confirm('⚠️ هل أنت متأكد من تنظيف التخزين المؤقت؟\nسيتم حذف جميع الملفات المحفوظة محلياً.')) {
-        return;
-    }
-
-    try {
-        // حذف IndexedDB
-        if (window.indexedDB) {
-            const req = indexedDB.deleteDatabase('StudyMaterialsDB');
-            await new Promise((resolve, reject) => {
-                req.onsuccess = () => resolve();
-                req.onerror = () => reject(req.error);
-            });
-        }
-
-        // حذف localStorage المؤقت
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('study_cache_')) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-
-        // حذف كاش المتصفح
-        if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map(name => caches.delete(name)));
-        }
-
-        alert('✅ تم تنظيف التخزين المؤقت بنجاح! سيتم إعادة تحميل الصفحة.');
-        window.location.reload();
-    } catch (error) {
-        console.error('❌ خطأ في تنظيف التخزين:', error);
-        alert('❌ حدث خطأ أثناء تنظيف التخزين المؤقت.');
-    }
-}
-
-// جعل الدوال متاحة عالمياً
-window.openSystemDiagnosticsModal = openSystemDiagnosticsModal;
-window.closeDiagnosticsModal = closeDiagnosticsModal;
-window.runSystemDiagnostics = runSystemDiagnostics;
-window.calculateStorageUsage = calculateStorageUsage;
-window.clearAppOfflineCache = clearAppOfflineCache;
-
-console.log('✅ تم تحميل نظام التشخيص بنجاح!');
 
 async function runSystemDiagnostics() {
     const statusRender = document.getElementById('diag-render-status');
