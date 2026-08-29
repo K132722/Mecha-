@@ -379,6 +379,7 @@ async function getIndexedDBSize() {
 // ========================================================================
 
 // -------- 4.1 حفظ بيانات مجلد في التخزين المؤقت --------
+// -------- 4.1 حفظ بيانات مجلد في التخزين المؤقت --------
 async function cacheFolderData(pathKey, data) {
     try {
         // حفظ في localStorage كنسخة احتياطية سريعة
@@ -392,31 +393,47 @@ async function cacheFolderData(pathKey, data) {
     }
 }
 
-// -------- 4.2 استرجاع بيانات مجلد من التخزين المؤقت --------
+// -------- 4.2 استرجاع بيانات مجلد من التخزين المؤقت (معدل) --------
 async function getCachedFolderData(pathKey) {
     try {
-        // محاولة من IndexedDB أولاً
-        const idbData = await getCacheFromIDB(`folder_${pathKey}`);
-        if (idbData) {
-            // تحديث localStorage للنسخة الاحتياطية
-            localStorage.setItem(`study_cache_${pathKey}`, JSON.stringify(idbData));
-            return idbData;
-        }
-        
-        // محاولة من localStorage
+        // ====== 1. محاولة من localStorage أولاً (أسرع وأكثر استقراراً) ======
         const localData = localStorage.getItem(`study_cache_${pathKey}`);
         if (localData) {
             try {
                 const parsed = JSON.parse(localData);
-                // حفظ في IndexedDB للمستقبل
-                await saveCacheToIDB(`folder_${pathKey}`, parsed);
-                return parsed;
+                // التحقق من صحة البيانات
+                if (parsed && typeof parsed === 'object') {
+                    console.log('✅ تم استرجاع البيانات من localStorage:', pathKey);
+                    // تحديث IndexedDB في الخلفية (بدون انتظار)
+                    try {
+                        await saveCacheToIDB(`folder_${pathKey}`, parsed);
+                    } catch (e) {
+                        // تجاهل أخطاء IndexedDB
+                    }
+                    return parsed;
+                }
             } catch (e) {
-                return null;
+                console.warn('بيانات localStorage غير صالحة:', e);
             }
         }
         
+        // ====== 2. إذا لم يوجد في localStorage، حاول من IndexedDB ======
+        try {
+            const idbData = await getCacheFromIDB(`folder_${pathKey}`);
+            if (idbData) {
+                console.log('✅ تم استرجاع البيانات من IndexedDB:', pathKey);
+                // حفظ في localStorage للسرعة المستقبلية
+                localStorage.setItem(`study_cache_${pathKey}`, JSON.stringify(idbData));
+                return idbData;
+            }
+        } catch (idbErr) {
+            console.warn('فشل استرجاع من IndexedDB:', idbErr);
+        }
+        
+        // ====== 3. إذا لم توجد بيانات في أي مكان ======
+        console.log('⚠️ لا توجد بيانات مخزنة للمسار:', pathKey);
         return null;
+        
     } catch (err) {
         console.warn('Failed to get cached folder data:', err);
         return null;
@@ -577,6 +594,12 @@ async function deleteFileFromStorage(fileId) {
 // ========================================================================
 // 8. التنقل والمجلدات
 // ========================================================================
+// ========================================================================
+// 8. التنقل والمجلدات
+// ========================================================================
+// ========================================================================
+// 8. التنقل والمجلدات
+// ========================================================================
 function getPathKey(pathArray) {
     return 'root' + (pathArray.length > 0 ? '/' + pathArray.join('/') : '');
 }
@@ -598,6 +621,45 @@ function isLeafFolder(pathArray) {
     } catch (e) {}
     return false;
 }
+
+// ====== دالة التنقل الأساسية (الصحيحة) ======
+function navigateTo(path) {
+    if (path === 'root') {
+        currentStudyPath = [];
+    } else {
+        const parts = path.split('/').filter(p => p !== 'root' && p !== '');
+        currentStudyPath = parts;
+    }
+    updateBreadcrumb();
+    updateButtons();
+    loadCurrentFolder();
+    // إغلاق نتائج البحث
+    clearSearch();
+    // حفظ المسار
+    saveCurrentPath();
+    saveBrowseState();
+}
+
+function goBack() {
+    if (currentStudyPath.length > 0) {
+        currentStudyPath.pop();
+        updateBreadcrumb();
+        updateButtons();
+        loadCurrentFolder();
+        saveCurrentPath();
+        saveBrowseState();
+    }
+}
+
+function goHome() {
+    window.location.href = 'index.html';
+}
+
+// ============================================================
+// 💾 دوال حفظ واسترجاع الحالة
+// ============================================================
+
+// حفظ المسار الحالي
 // ============================================================
 // 💾 دوال حفظ واسترجاع الحالة
 // ============================================================
@@ -655,7 +717,7 @@ function loadBrowseState() {
     return null;
 }
 
-// تحديث شريط الحالة
+// تحديث شريط الحالة (نسخة واحدة فقط - هذه هي الصحيحة)
 function updateStatusBar(message) {
     const statusText = document.getElementById('connectionText');
     const dot = document.getElementById('connectionDot');
@@ -667,32 +729,18 @@ function updateStatusBar(message) {
     }
 }
 
-function navigateTo(path) {
-    if (path === 'root') {
-        currentStudyPath = [];
-    } else {
-        const parts = path.split('/').filter(p => p !== 'root' && p !== '');
-        currentStudyPath = parts;
-    }
-    updateBreadcrumb();
-    updateButtons();
-    loadCurrentFolder();
-    // إغلاق نتائج البحث
-    clearSearch();
-}
+// ========================================================================
+// 9. تحديث واجهة المستخدم
+// ========================================================================
 
-function goBack() {
-    if (currentStudyPath.length > 0) {
-        currentStudyPath.pop();
-        updateBreadcrumb();
-        updateButtons();
-        loadCurrentFolder();
-    }
-}
+// -------- 9.1 تحديث شريط التنقل --------
 
-function goHome() {
-    window.location.href = 'index.html';
-}
+
+// -------- 9.4 تحديث مؤشر التخزين --------
+
+
+// حفظ حالة التصفح الكاملة
+
 
 // ========================================================================
 // 9. تحديث واجهة المستخدم
@@ -757,24 +805,7 @@ function updateButtons() {
 }
 
 // -------- 9.3 تحديث شريط الحالة --------
-function updateStatusBar() {
-    const dot = document.getElementById('connectionDot');
-    const text = document.getElementById('connectionText');
-    const userDisplay = document.getElementById('userDisplay');
-    
-    if (isOnline) {
-        if (dot) { dot.className = 'status-dot online'; }
-        if (text) text.textContent = 'متصل';
-    } else {
-        if (dot) { dot.className = 'status-dot offline'; }
-        if (text) text.textContent = 'غير متصل (أوفلاين)';
-    }
-    
-    const user = getStudyUser();
-    if (userDisplay) {
-        userDisplay.textContent = user ? `👤 ${user.name || 'مستخدم'}` : '👤 زائر';
-    }
-}
+
 
 // -------- 9.4 تحديث عداد العناصر --------
 function updateItemCount(data) {
@@ -806,6 +837,10 @@ async function updateStorageIndicator() {
 // ========================================================================
 
 // -------- 10.1 تحميل المجلد الحالي --------
+// ============================================================
+// 📂 تحميل المجلد الحالي - نسخة محسّنة للأوفلاين
+// ============================================================
+
 async function loadCurrentFolder() {
     const grid = document.getElementById('foldersGrid');
     if (!grid) return;
@@ -814,62 +849,152 @@ async function loadCurrentFolder() {
 
     const pathKey = getPathKey(currentStudyPath);
     let data = null;
+    let isFromCache = false;
 
-    // محاولة من التخزين المؤقت أولاً
-    const cached = await getCachedFolderData(pathKey);
-    if (cached) {
-        data = cached;
+    // ====== 1. محاولة من localStorage أولاً (أسرع) ======
+    try {
+        const localData = localStorage.getItem(`study_cache_${pathKey}`);
+        if (localData) {
+            data = JSON.parse(localData);
+            isFromCache = true;
+            console.log('✅ تم تحميل البيانات من localStorage:', pathKey);
+        }
+    } catch (e) {
+        console.warn('فشل تحميل من localStorage:', e);
+    }
+
+    // ====== 2. إذا لم يوجد في localStorage، حاول من IndexedDB ======
+    if (!data) {
+        try {
+            const idbData = await getCacheFromIDB(`folder_${pathKey}`);
+            if (idbData) {
+                data = idbData;
+                isFromCache = true;
+                console.log('✅ تم تحميل البيانات من IndexedDB:', pathKey);
+                // حفظ في localStorage للسرعة المستقبلية
+                localStorage.setItem(`study_cache_${pathKey}`, JSON.stringify(data));
+            }
+        } catch (e) {
+            console.warn('فشل تحميل من IndexedDB:', e);
+        }
+    }
+
+    // ====== 3. إذا كان هناك بيانات من الكاش، اعرضها فوراً ======
+    if (data && data.posts) {
         globalPostsData = data;
         renderFolderContent(data);
         updateItemCount(data);
-        // إذا كان هناك اتصال، قم بتحديث البيانات في الخلفية
-        if (isOnline) {
+        updateStatusBar(isOnline ? '🌐 متصل' : '📦 أوفلاين - من الكاش');
+        
+        // حفظ المسار
+        saveCurrentPath();
+        saveBrowseState();
+
+        // ====== 4. تحديث البيانات في الخلفية (إذا كان متصلاً) ======
+        if (isOnline && studyDb) {
+            console.log('🔄 تحديث البيانات في الخلفية...');
             refreshFolderInBackground(pathKey);
         }
         return;
     }
 
-    // إذا لم يكن هناك كاش، حاول من السيرفر
-    if (isOnline && studyDb) {
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        if (progressContainer) progressContainer.style.display = 'block';
-        if (progressBar) progressBar.style.width = '30%';
-
-        try {
-            const snapshot = await studyDb.ref(`study_materials/${pathKey}`).once('value');
-            data = snapshot.val() || { folders: [], posts: [] };
-            
-            if (progressBar) progressBar.style.width = '70%';
-            
-            // حفظ في التخزين المؤقت
-            await cacheFolderData(pathKey, data);
-            globalPostsData = data;
-            
-            if (progressBar) progressBar.style.width = '100%';
-            setTimeout(() => {
-                if (progressContainer) progressContainer.style.display = 'none';
-                if (progressBar) progressBar.style.width = '0%';
-            }, 500);
-            
-            renderFolderContent(data);
-            updateItemCount(data);
-            return;
-        } catch (err) {
-            console.error('Error loading folder from server:', err);
-        }
+    // ====== 5. إذا لم توجد بيانات في الكاش ======
+    if (!isOnline) {
+        grid.innerHTML = `
+            <div class="empty-state-advanced">
+                <span class="empty-icon">📡</span>
+                <h3>أنت غير متصل بالإنترنت</h3>
+                <p>لم يتم تحميل هذا المجلد مسبقاً. يرجى الاتصال بالإنترنت لتحميل المحتوى.</p>
+                <button class="btn-action btn-primary" style="margin-top:12px;" onclick="loadCurrentFolder()">🔄 المحاولة مجدداً</button>
+            </div>`;
+        updateStatusBar('📡 غير متصل - لا يوجد كاش');
+        return;
     }
 
-    // إذا فشل كل شيء
-    grid.innerHTML = `
-        <div class="empty-state-advanced">
-            <span class="empty-icon">📡</span>
-            <h3>${isOnline ? 'حدث خطأ في التحميل' : 'أنت غير متصل بالإنترنت'}</h3>
-            <p>${isOnline ? 'يرجى المحاولة مرة أخرى' : 'تم حفظ بعض البيانات محلياً، يرجى الاتصال بالإنترنت للمزامنة'}</p>
-            ${!isOnline ? '<button class="btn-action btn-primary" style="margin-top:12px;" onclick="loadCurrentFolder()">🔄 المحاولة مجدداً</button>' : ''}
-        </div>`;
-}
+    // ====== 6. تحميل من Firebase (إذا كان متصلاً) ======
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        progressContainer.style.background = 'rgba(255,255,255,0.05)';
+        progressContainer.style.borderRadius = '4px';
+        progressContainer.style.height = '4px';
+        progressContainer.style.overflow = 'hidden';
+        progressContainer.style.marginTop = '4px';
+    }
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.style.height = '100%';
+        progressBar.style.background = 'var(--gold-grad)';
+        progressBar.style.borderRadius = '4px';
+        progressBar.style.transition = 'width 0.4s ease';
+    }
 
+    try {
+        if (progressBar) progressBar.style.width = '20%';
+        
+        const snapshot = await studyDb.ref(`study_materials/${pathKey}`).once('value');
+        data = snapshot.val() || { folders: [], posts: [] };
+        
+        if (progressBar) progressBar.style.width = '60%';
+        
+        // حفظ في localStorage و IndexedDB
+        try {
+            localStorage.setItem(`study_cache_${pathKey}`, JSON.stringify(data));
+            await saveCacheToIDB(`folder_${pathKey}`, data);
+            console.log('✅ تم حفظ البيانات في الكاش:', pathKey);
+        } catch (cacheErr) {
+            console.warn('فشل حفظ في الكاش:', cacheErr);
+        }
+        
+        globalPostsData = data;
+        
+        if (progressBar) progressBar.style.width = '100%';
+        setTimeout(() => {
+            if (progressContainer) {
+                progressContainer.style.display = 'none';
+                progressContainer.style.background = 'transparent';
+            }
+            if (progressBar) progressBar.style.width = '0%';
+        }, 500);
+        
+        renderFolderContent(data);
+        updateItemCount(data);
+        updateStatusBar('🌐 متصل - محدث من السيرفر');
+        
+        // حفظ المسار
+        saveCurrentPath();
+        saveBrowseState();
+        return;
+
+    } catch (err) {
+        console.error('❌ خطأ في تحميل المجلد من السيرفر:', err);
+        
+        // محاولة استخدام أي بيانات موجودة في الكاش حتى لو كانت قديمة
+        const emergencyCache = localStorage.getItem(`study_cache_${pathKey}`);
+        if (emergencyCache) {
+            try {
+                const emergencyData = JSON.parse(emergencyCache);
+                globalPostsData = emergencyData;
+                renderFolderContent(emergencyData);
+                updateItemCount(emergencyData);
+                updateStatusBar('⚠️ بيانات مؤقتة - خطأ في التحديث');
+                grid.innerHTML = ''; // نضيف هذا عشان ما تظهر رسالة الخطأ فوق المحتوى
+                return;
+            } catch (e) {}
+        }
+        
+        grid.innerHTML = `
+            <div class="empty-state-advanced">
+                <span class="empty-icon">❌</span>
+                <h3>حدث خطأ في التحميل</h3>
+                <p>${err.message || 'يرجى المحاولة مرة أخرى'}</p>
+                <button class="btn-action btn-primary" style="margin-top:12px;" onclick="loadCurrentFolder()">🔄 إعادة المحاولة</button>
+            </div>`;
+        if (progressContainer) progressContainer.style.display = 'none';
+        updateStatusBar('❌ خطأ في التحميل');
+    }
+}
 // -------- 10.2 تحديث المجلد في الخلفية --------
 async function refreshFolderInBackground(pathKey) {
     try {
