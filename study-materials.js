@@ -598,6 +598,74 @@ function isLeafFolder(pathArray) {
     } catch (e) {}
     return false;
 }
+// ============================================================
+// 💾 دوال حفظ واسترجاع الحالة
+// ============================================================
+
+// حفظ المسار الحالي
+function saveCurrentPath() {
+    try {
+        localStorage.setItem('study_current_path', JSON.stringify(currentStudyPath));
+    } catch (e) {
+        console.warn('فشل حفظ المسار:', e);
+    }
+}
+
+// استرجاع المسار المحفوظ
+function loadSavedPath() {
+    try {
+        const saved = localStorage.getItem('study_current_path');
+        if (saved) {
+            const path = JSON.parse(saved);
+            if (Array.isArray(path)) {
+                return path;
+            }
+        }
+    } catch (e) {
+        console.warn('فشل استرجاع المسار:', e);
+    }
+    return [];
+}
+
+// حفظ حالة التصفح الكاملة
+function saveBrowseState() {
+    try {
+        const state = {
+            path: currentStudyPath,
+            timestamp: Date.now(),
+            url: window.location.href,
+            scrollY: window.scrollY
+        };
+        localStorage.setItem('study_browse_state', JSON.stringify(state));
+    } catch (e) {
+        console.warn('فشل حفظ حالة التصفح:', e);
+    }
+}
+
+// استرجاع حالة التصفح
+function loadBrowseState() {
+    try {
+        const saved = localStorage.getItem('study_browse_state');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.warn('فشل استرجاع حالة التصفح:', e);
+    }
+    return null;
+}
+
+// تحديث شريط الحالة
+function updateStatusBar(message) {
+    const statusText = document.getElementById('connectionText');
+    const dot = document.getElementById('connectionDot');
+    if (statusText) {
+        statusText.textContent = message || (isOnline ? '🌐 متصل' : '📡 غير متصل');
+    }
+    if (dot) {
+        dot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
+    }
+}
 
 function navigateTo(path) {
     if (path === 'root') {
@@ -2857,34 +2925,55 @@ function handleUrlParams() {
 // ========================================================================
 // 25. تهيئة التطبيق
 // ========================================================================
+// ============================================================
+// 🚀 تهيئة التطبيق - نسخة محسّنة للأوفلاين مع حفظ الحالة
+// ============================================================
+
 async function initStudyApp() {
     console.log('🚀 بدء تهيئة التطبيق المتطور...');
     
-    // تهيئة Firebase
+    // ====== 1. تهيئة Firebase ======
     initFirebase();
 
-    // تحديث حالة المستخدم
+    // ====== 2. تحديث حالة المستخدم ======
     const user = getStudyUser();
     if (user) {
-        document.getElementById('userDisplay').textContent = `👤 ${user.name || 'مستخدم'}`;
+        const userDisplay = document.getElementById('userDisplay');
+        if (userDisplay) {
+            userDisplay.textContent = `👤 ${user.name || 'مستخدم'}`;
+        }
     }
 
-    // بناء الواجهة
+    // ====== 3. استرجاع المسار المحفوظ (الأهم للأوفلاين) ======
+    const savedPath = loadSavedPath();
+    if (savedPath && savedPath.length > 0) {
+        currentStudyPath = savedPath;
+        console.log('📂 تم استرجاع المسار المحفوظ:', currentStudyPath);
+    } else {
+        console.log('📂 لا يوجد مسار محفوظ، سيتم البدء من الجذر');
+    }
+
+    // ====== 4. بناء الواجهة الأساسية ======
     updateBreadcrumb();
     updateButtons();
     handleUrlParams();
+    
+    // ====== 5. تحميل المجلد الحالي (مع دعم الأوفلاين) ======
     await loadCurrentFolder();
     await updateStorageIndicator();
 
-    // بدء مراقبة الاتصال
+    // ====== 6. تحديث شريط الحالة ======
+    updateStatusBar(isOnline ? '🌐 متصل' : '📡 غير متصل (أوفلاين)');
+
+    // ====== 7. بدء مراقبة الاتصال ======
     initConnectionMonitoring();
 
-    // بدء الاستماع للإشعارات
+    // ====== 8. بدء الاستماع للإشعارات (إذا كان متصلاً) ======
     if (isOnline && studyDb) {
         startNotificationListener();
     }
 
-    // تهيئة الإشعارات
+    // ====== 9. تهيئة الإشعارات ======
     loadNotificationsFromStorage();
     setTimeout(async () => {
         const permission = await requestNotificationPermission();
@@ -2893,16 +2982,34 @@ async function initStudyApp() {
         }
     }, 2000);
 
-    // بدء Keep-Alive
+    // ====== 10. بدء Keep-Alive والتحديث الدوري ======
     startRenderKeepAlive();
     startPeriodicCacheUpdate();
 
-    // اختصارات لوحة المفاتيح
+    // ====== 11. حفظ الحالة بشكل دوري (كل 30 ثانية) ======
+    setInterval(() => {
+        saveCurrentPath();
+        saveBrowseState();
+        console.log('💾 تم حفظ حالة التصفح تلقائياً');
+    }, 30000);
+
+    // ====== 12. حفظ الحالة عند إغلاق الصفحة ======
+    window.addEventListener('beforeunload', () => {
+        saveCurrentPath();
+        saveBrowseState();
+        console.log('💾 تم حفظ الحالة قبل الخروج');
+    });
+
+    // ====== 13. اختصارات لوحة المفاتيح ======
     document.addEventListener('keydown', (e) => {
         // Ctrl+K أو Cmd+K للبحث
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
-            document.getElementById('searchInput').focus();
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
         }
         // Escape لإغلاق النوافذ
         if (e.key === 'Escape') {
@@ -2913,19 +3020,23 @@ async function initStudyApp() {
             closeFilePreview();
             const overlay = document.getElementById('uploadProgressOverlay');
             if (overlay) overlay.classList.remove('active');
-            // إغلاق نتائج البحث
             clearSearch();
         }
     });
 
-    // إغلاق النوافذ عند النقر على الخلفية
+    // ====== 14. إغلاق النوافذ عند النقر على الخلفية ======
     document.addEventListener('click', (e) => {
         if (e.target && e.target.classList && e.target.classList.contains('modal-overlay-advanced')) {
             e.target.classList.remove('active');
         }
     });
 
+    // ====== 15. عرض معلومات التشغيل ======
     console.log('✅ تم تشغيل التطبيق المتطور بنجاح');
+    console.log(`📊 الحالة: ${isOnline ? 'متصل' : 'غير متصل (أوفلاين)'}`);
+    console.log(`📂 المسار الحالي: ${currentStudyPath.join(' › ') || 'الجذر'}`);
+    console.log(`👤 المستخدم: ${user ? user.name : 'زائر'}`);
+    console.log(`💾 التخزين: جاري حساب المساحة...`);
 }
 
 // ========================================================================
