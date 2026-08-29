@@ -505,204 +505,480 @@
         }
 
         /* ====== بطاقة المنشور ====== */
-        .post-card-advanced {
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-card);
-            padding: 16px 12px;
-            cursor: pointer;
-            transition: var(--transition-smooth);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            user-select: none;
-            min-height: 160px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
+      /* ============================================================
+   📇 بطاقات المنشورات - مربعة مع عرض كامل للمحتوى
+   ============================================================ */
 
-        .post-card-advanced:hover {
-            border-color: rgba(212, 175, 55, 0.3);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-        }
+/* -------- البطاقة الرئيسية - مربعة -------- */
+/* ============================================================
+   📇 بطاقات المنشورات - التصميم الأصلي (مع كلاس post-card-advanced)
+   ============================================================ */
 
-        .post-card-advanced .post-icon { font-size: 32px; }
-        .post-card-advanced .post-title { color: var(--text-primary); font-size: 14px; font-weight: 700; word-break: break-word; }
-        .post-card-advanced .post-text {
-            color: var(--text-secondary) !important;
-            font-size: 11px !important;
-            line-height: 1.4 !important;
-            text-align: center !important;
-            margin: 2px 0 4px 0 !important;
-            word-break: break-word !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-        }
+.post-card-advanced {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+    padding: 12px 8px;
+    min-height: 180px;
+    gap: 4px;
+    
+    /* تنسيقات البطاقة الأساسية */
+    background: rgba(12, 25, 45, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
 
-        .post-card-advanced .post-file-info {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: var(--text-muted);
-            margin: 2px 0;
-        }
+.post-card-advanced:hover {
+    border-color: var(--gold-primary);
+    background: rgba(22, 42, 72, 0.5);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(212, 175, 55, 0.08);
+}
 
-        .post-card-advanced .post-file-info .file-ext {
-            background: rgba(212, 175, 55, 0.1);
-            color: var(--gold-primary);
-            padding: 1px 10px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 700;
-        }
+/* ====== أزرار الإدارة (تعديل + حذف) ====== */
+.post-card-admin-actions {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
 
-        .post-card-advanced .post-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px 10px;
-            font-size: 10px;
-            color: var(--text-muted);
-            margin: 4px 0;
-            justify-content: center;
-        }
+.post-card-admin-actions button {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10px;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.3s ease;
+    font-family: 'Tajawal', sans-serif;
+}
 
-        .post-card-advanced .post-actions {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-            width: 100%;
-            margin-top: 4px;
-            flex-wrap: wrap;
-        }
+.post-card-admin-actions button:hover {
+    background: rgba(212, 175, 55, 0.3);
+}
 
-        .post-card-advanced .post-actions .doc-btn {
-            border: none;
-            border-radius: 20px;
-            padding: 5px 14px;
-            font-size: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition-smooth);
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-family: 'Tajawal', sans-serif;
-        }
+/* ====== أيقونة الملف ====== */
+.post-card-advanced .folder-icon-big {
+    width: 50px;
+    height: 50px;
+    transform: scale(2);
+    object-fit: contain;
+}
 
-        .post-card-advanced .post-actions .doc-btn:hover { transform: translateY(-2px); }
+/* ====== عنوان المنشور ====== */
+.post-card-advanced .folder-name1 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    word-break: break-word;
+}
 
-        .post-card-advanced .post-actions .btn-view {
-            background: rgba(255,255,255,0.08);
-            color: var(--text-primary);
-            border: 1px solid var(--glass-border);
-        }
-        .post-card-advanced .post-actions .btn-view:hover {
-            background: rgba(255,255,255,0.12);
-            border-color: var(--gold-primary);
-        }
+/* ====== نص المنشور ====== */
+.post-details-text {
+    color: #cbd5e1 !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+    margin: 4px 0 6px 0 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
 
-        .post-card-advanced .post-actions .btn-save {
-            background: var(--gold-grad);
-            color: #0a0f1e;
-        }
-        .post-card-advanced .post-actions .btn-save:hover {
-            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
-        }
+/* ====== اسم الملف ====== */
+.file-name-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 4px 0 !important;
+    gap: 2px !important;
+    width: 100%;
+}
 
-        .post-card-advanced .post-actions .btn-saved {
-            background: rgba(74, 222, 128, 0.12);
-            color: var(--success);
-            border: 1px solid rgba(74, 222, 128, 0.15);
-            cursor: default;
-        }
+.file-name-line {
+    color: #ffffff !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    text-align: center !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    direction: ltr !important;
+}
 
-        .post-card-advanced .post-admin-actions {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            display: flex;
-            gap: 4px;
-            z-index: 10;
-        }
+.file-ext-badge {
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
+    margin-top: 1px !important;
+}
 
-        .post-card-advanced .post-admin-actions button {
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            padding: 3px 8px;
-            font-size: 10px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: var(--transition-smooth);
-        }
+/* ====== معلومات المنشور (المستخدم والوقت والحجم) ====== */
+.post-meta-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 10px;
+    color: #94a3b8;
+    margin: 4px 0;
+    width: 100%;
+}
 
-        .post-card-advanced .post-admin-actions button:hover {
-            background: var(--gold-grad);
-            color: #0a0f1e;
-        }
+.post-meta-info div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
 
-        .post-card-advanced .post-admin-actions .btn-delete-post:hover {
-            background: var(--danger);
-            color: #fff;
-        }
+/* ====== أزرار المعاينة والحفظ ====== */
+.post-square-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    width: 100%;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
 
-        /* ====== شريط التقدم للتحميل ====== */
-        .download-progress-advanced {
-            width: 100%;
-            margin-top: 6px;
-            display: none;
-        }
+.doc-btn {
+    border: none;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Tajawal', sans-serif;
+}
 
-        .download-progress-advanced .progress-track {
-            background: rgba(255,255,255,0.06);
-            border-radius: 6px;
-            height: 5px;
-            overflow: hidden;
-        }
+/* زر المعاينة */
+.doc-btn-view {
+    background: rgba(255, 255, 255, 0.9);
+    color: #0f172a;
+}
 
-        .download-progress-advanced .progress-track .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: var(--gold-grad);
-            border-radius: 6px;
-            transition: width 0.3s ease;
-        }
+.doc-btn-view:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+}
 
-        .download-progress-advanced .progress-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 9px;
-            color: var(--text-muted);
-            margin-top: 3px;
-        }
+/* زر الحفظ */
+.doc-btn-download {
+    background: #2563eb;
+    color: #ffffff;
+}
 
-        .offline-badge {
-            display: none;
-            color: var(--success);
-            font-size: 10px;
-            font-weight: 700;
-            margin-top: 2px;
-        }
+.doc-btn-download:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
 
-        .offline-badge.visible { display: block; }
+/* زر محفوظ */
+.doc-btn-saved {
+    background: rgba(74, 222, 128, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.15);
+    cursor: default;
+}
 
-        /* ====== حالة فارغة ====== */
-        .empty-state-advanced {
-            text-align: center;
-            padding: 50px 20px;
-            grid-column: 1 / -1;
-        }
+.doc-btn-saved:hover {
+    transform: none;
+}
 
-        .empty-state-advanced .empty-icon { font-size: 56px; display: block; margin-bottom: 16px; opacity: 0.4; }
-        .empty-state-advanced h3 { color: var(--text-secondary); font-size: 16px; font-weight: 600; }
-        .empty-state-advanced p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+/* ====== شريط التقدم للتحميل ====== */
+.download-progress-box {
+    width: 100%;
+    margin-top: 8px;
+    display: none;
+}
+
+.download-progress-box .progress-track {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    height: 5px;
+    overflow: hidden;
+}
+
+.download-progress-box .progress-track .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #2563eb;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.download-progress-box .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #94a3b8;
+    margin-top: 3px;
+}
+
+/* ====== شارة التخزين المحلي ====== */
+.offline-badge {
+    display: none;
+    color: #10b981;
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+.offline-badge.visible {
+    display: block;
+}
+
+/* ============================================================
+   🎯 شبكة البطاقات
+   ============================================================ */
+#foldersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+    padding: 6px 0;
+}
+
+/* ============================================================
+   📱 استجابة للشاشات الصغيرة
+   ============================================================ */
+@media (max-width: 560px) {
+    #foldersGrid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 12px;
+    }
+    
+    .post-card-advanced {
+        padding: 10px 6px;
+        min-height: 160px;
+        border-radius: 14px;
+    }
+    
+    .post-card-advanced .folder-name1 {
+        font-size: 14px;
+    }
+    
+    .post-card-advanced .folder-icon-big {
+        width: 40px;
+        height: 40px;
+        transform: scale(1.8);
+    }
+    
+    .post-details-text {
+        font-size: 10px !important;
+        -webkit-line-clamp: 1 !important;
+    }
+    
+    .file-name-line {
+        font-size: 11px !important;
+    }
+    
+    .post-meta-info {
+        font-size: 9px;
+    }
+    
+    .doc-btn {
+        padding: 4px 10px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    #foldersGrid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 10px;
+    }
+    
+    .post-card-advanced {
+        padding: 8px 4px;
+        min-height: 140px;
+        border-radius: 12px;
+    }
+    
+    .post-card-advanced .folder-name1 {
+        font-size: 12px;
+    }
+    
+    .post-card-advanced .folder-icon-big {
+        width: 32px;
+        height: 32px;
+        transform: scale(1.5);
+    }
+    
+    .post-details-text {
+        font-size: 9px !important;
+        -webkit-line-clamp: 1 !important;
+    }
+    
+    .file-name-line {
+        font-size: 10px !important;
+        -webkit-line-clamp: 1 !important;
+    }
+    
+    .file-ext-badge {
+        font-size: 9px !important;
+    }
+    
+    .post-meta-info {
+        font-size: 8px;
+        gap: 1px;
+    }
+    
+    .doc-btn {
+        padding: 3px 8px;
+        font-size: 9px;
+    }
+    
+    .post-square-actions {
+        gap: 4px;
+    }
+}
+
+/* ============================================================
+   🎯 شبكة البطاقات - تحسين التوزيع
+   ============================================================ */
+#foldersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 16px;
+    padding: 8px 0;
+}
+
+/* ============================================================
+   📱 استجابة للشاشات الصغيرة
+   ============================================================ */
+@media (max-width: 560px) {
+    #foldersGrid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .post-card-advanced {
+        padding: 14px 10px;
+        min-height: 180px;
+        border-radius: 14px;
+    }
+    
+    .post-card-advanced .post-icon {
+        font-size: 28px;
+    }
+    
+    .post-card-advanced .post-title {
+        font-size: 13px;
+    }
+    
+    .post-card-advanced .post-text {
+        font-size: 10px !important;
+        max-height: 50px;
+    }
+    
+    .post-card-advanced .post-meta {
+        font-size: 9px;
+        gap: 2px 8px;
+    }
+    
+    .post-card-advanced .post-actions .doc-btn {
+        padding: 4px 12px;
+        font-size: 9px;
+    }
+    
+    .post-card-advanced .post-file-info {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+    
+    .post-card-advanced .post-file-info .file-name {
+        font-size: 10px;
+    }
+    
+    .post-card-advanced .post-file-info .file-ext {
+        font-size: 8px;
+        padding: 1px 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    #foldersGrid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+    }
+    
+    .post-card-advanced {
+        padding: 10px 8px;
+        min-height: 160px;
+        border-radius: 12px;
+    }
+    
+    .post-card-advanced .post-icon {
+        font-size: 24px;
+    }
+    
+    .post-card-advanced .post-title {
+        font-size: 12px;
+    }
+    
+    .post-card-advanced .post-text {
+        font-size: 9px !important;
+        max-height: 40px;
+    }
+    
+    .post-card-advanced .post-meta {
+        font-size: 8px;
+        gap: 1px 6px;
+    }
+    
+    .post-card-advanced .post-actions .doc-btn {
+        padding: 3px 10px;
+        font-size: 8px;
+    }
+    
+    .post-card-advanced .post-file-info {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+    
+    .post-card-advanced .post-file-info .file-name {
+        font-size: 9px;
+        max-width: 60%;
+    }
+    
+    .post-card-advanced .post-file-info .file-ext {
+        font-size: 7px;
+        padding: 1px 8px;
+    }
+    
+    .post-card-advanced .post-file-info .file-size {
+        font-size: 8px;
+    }
+}
 
         /* ============================================================
            📋 لوحة الإشعارات
