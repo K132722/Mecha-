@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
-    <title>📚 المواد الدراسية - منظومة الميكاترونكس</title>
+    <title>📚 المواد الدراسية - منظومة الميكاترونكس V2</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a0f1e">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         /* ============================================================
-           🎨 التصميم الأساسي
+           🎨 التصميم الأساسي V2
            ============================================================ */
         :root {
             --primary-dark: #0a0f1e;
@@ -26,6 +26,7 @@
             --text-muted: #64748b;
             --success: #4ade80;
             --danger: #ef4444;
+            --warning: #f59e0b;
             --info: #38bdf8;
             --accent-purple: #8b5cf6;
             --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -54,7 +55,7 @@
 
         .study-container {
             width: 100%;
-            max-width: 720px;
+            max-width: 820px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
@@ -77,12 +78,15 @@
             border-radius: var(--radius-sm);
             font-size: 12px;
             color: var(--text-secondary);
+            flex-wrap: wrap;
+            gap: 4px;
         }
 
         .status-bar .status-left {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-wrap: wrap;
         }
 
         .status-dot {
@@ -103,6 +107,7 @@
             padding: 4px 10px;
             border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
         }
 
         .storage-indicator .storage-bar {
@@ -285,6 +290,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .folder-header-advanced .folder-title .title-icon { font-size: 28px; }
@@ -310,7 +316,7 @@
         }
 
         /* ============================================================
-           🔘 مجموعة الأزرار (بما فيها زر الإشعارات)
+           🔘 مجموعة الأزرار
            ============================================================ */
         .action-buttons-group {
             display: flex;
@@ -376,7 +382,7 @@
         }
 
         /* ============================================================
-           🔔 زر الإشعارات (ضمن مجموعة الأزرار)
+           🔔 زر الإشعارات
            ============================================================ */
         .btn-notification {
             display: inline-flex;
@@ -404,7 +410,6 @@
             box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
         }
 
-        /* شارة العداد داخل الزر */
         .btn-notification .notif-badge-inline {
             position: absolute;
             top: -6px;
@@ -432,7 +437,7 @@
            ============================================================ */
         #foldersGrid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 14px;
             padding: 6px 0;
         }
@@ -504,481 +509,685 @@
             color: #fff;
         }
 
-        /* ====== بطاقة المنشور ====== */
-      /* ============================================================
-   📇 بطاقات المنشورات - مربعة مع عرض كامل للمحتوى
-   ============================================================ */
+        /* ============================================================
+           📇 بطاقات المنشورات العادية
+           ============================================================ */
+        .post-card-advanced {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
+            padding: 16px 12px;
+            transition: var(--transition-smooth);
+            position: relative;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 180px;
+        }
 
-/* -------- البطاقة الرئيسية - مربعة -------- */
-/* ============================================================
-   📇 بطاقات المنشورات - التصميم الأصلي (مع كلاس post-card-advanced)
-   ============================================================ */
+        .post-card-advanced:hover {
+            border-color: var(--gold-primary);
+            transform: translateY(-4px);
+            box-shadow: var(--gold-glow);
+        }
 
-.post-card-advanced {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    text-align: center;
-    padding: 12px 8px;
-    min-height: 180px;
-    gap: 4px;
-    
-    /* تنسيقات البطاقة الأساسية */
-    background: rgba(12, 25, 45, 0.4);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-}
+        .post-card-advanced .folder-icon-big {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            align-self: center;
+        }
 
-.post-card-advanced:hover {
-    border-color: var(--gold-primary);
-    background: rgba(22, 42, 72, 0.5);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(212, 175, 55, 0.08);
-}
+        .post-card-advanced .folder-name1 {
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            word-break: break-word;
+        }
 
-/* ====== أزرار الإدارة (تعديل + حذف) ====== */
-.post-card-admin-actions {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    display: flex;
-    gap: 4px;
-    z-index: 10;
-}
+        .post-details-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+            text-align: center;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
 
-.post-card-admin-actions button {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 3px 8px;
-    font-size: 10px;
-    cursor: pointer;
-    color: #fff;
-    transition: all 0.3s ease;
-    font-family: 'Tajawal', sans-serif;
-}
+        .post-meta-info {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
 
-.post-card-admin-actions button:hover {
-    background: rgba(212, 175, 55, 0.3);
-}
+        .post-card-admin-actions {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
 
-/* ====== أيقونة الملف ====== */
-.post-card-advanced .folder-icon-big {
-    width: 50px;
-    height: 50px;
-    transform: scale(2);
-    object-fit: contain;
-}
+        .post-card-admin-actions button {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+        }
 
-/* ====== عنوان المنشور ====== */
-.post-card-advanced .folder-name1 {
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-    word-break: break-word;
-}
+        .post-card-admin-actions button:hover {
+            background: var(--gold-grad);
+            color: #0a0f1e;
+        }
 
-/* ====== نص المنشور ====== */
-.post-details-text {
-    color: #cbd5e1 !important;
-    font-size: 11px !important;
-    line-height: 1.4 !important;
-    text-align: center !important;
-    margin: 4px 0 6px 0 !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
+        .multi-file-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            margin-top: 6px;
+        }
 
-/* ====== اسم الملف ====== */
-.file-name-container {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 4px 0 !important;
-    gap: 2px !important;
-    width: 100%;
-}
+        .file-name-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
 
-.file-name-line {
-    color: #ffffff !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    line-height: 1.35 !important;
-    text-align: center !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    direction: ltr !important;
-}
+        .file-name-line {
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            word-break: break-word;
+            direction: ltr;
+        }
 
-.file-ext-badge {
-    color: #94a3b8 !important;
-    font-size: 11px !important;
-    font-weight: bold !important;
-    direction: ltr !important;
-    unicode-bidi: isolate !important;
-    margin-top: 1px !important;
-}
+        .file-ext-badge {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-muted);
+            font-size: 10px;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
 
-/* ====== معلومات المنشور (المستخدم والوقت والحجم) ====== */
-.post-meta-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 10px;
-    color: #94a3b8;
-    margin: 4px 0;
-    width: 100%;
-}
+        .file-size-text {
+            color: var(--info);
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
 
-.post-meta-info div {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-}
+        .post-square-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
 
-/* ====== أزرار المعاينة والحفظ ====== */
-.post-square-actions {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    width: 100%;
-    margin-top: 4px;
-    flex-wrap: wrap;
-}
+        .doc-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-.doc-btn {
-    border: none;
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-family: 'Tajawal', sans-serif;
-}
+        .doc-btn-view {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+        }
+        .doc-btn-view:hover {
+            background: rgba(255,255,255,0.15);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
 
-/* زر المعاينة */
-.doc-btn-view {
-    background: rgba(255, 255, 255, 0.9);
-    color: #0f172a;
-}
+        .doc-btn-download {
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--info);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+        }
+        .doc-btn-download:hover {
+            background: rgba(56, 189, 248, 0.2);
+            transform: translateY(-1px);
+        }
 
-.doc-btn-view:hover {
-    background: #ffffff;
-    transform: translateY(-1px);
-}
+        .doc-btn-saved {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            cursor: default;
+        }
+        .doc-btn-saved:hover { transform: none; }
 
-/* زر الحفظ */
-.doc-btn-download {
-    background: #2563eb;
-    color: #ffffff;
-}
+        .download-progress-box {
+            display: none;
+            margin-top: 6px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 6px;
+            padding: 4px 8px;
+        }
 
-.doc-btn-download:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-}
+        .download-progress-box .progress-track {
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            height: 4px;
+            overflow: hidden;
+        }
 
-/* زر محفوظ */
-.doc-btn-saved {
-    background: rgba(74, 222, 128, 0.12);
-    color: #4ade80;
-    border: 1px solid rgba(74, 222, 128, 0.15);
-    cursor: default;
-}
+        .download-progress-box .progress-track .progress-fill {
+            height: 100%;
+            background: var(--gold-grad);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
 
-.doc-btn-saved:hover {
-    transform: none;
-}
+        .download-progress-box .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
 
-/* ====== شريط التقدم للتحميل ====== */
-.download-progress-box {
-    width: 100%;
-    margin-top: 8px;
-    display: none;
-}
+        .offline-badge {
+            display: none;
+            color: var(--success);
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        .offline-badge.visible { display: block; }
 
-.download-progress-box .progress-track {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 4px;
-    height: 5px;
-    overflow: hidden;
-}
+        /* ============================================================
+           📚 بطاقات المحاضرات (للمجلدات الدراسية) - كل محاضرة في سطر منفصل
+           ============================================================ */
+        .lecture-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+            margin-bottom: 16px;
+            transition: var(--transition-smooth);
+            width: 100%;
+            display: block;
+        }
 
-.download-progress-box .progress-track .progress-fill {
-    height: 100%;
-    width: 0%;
-    background: #2563eb;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
+        .lecture-card:hover {
+            border-color: rgba(212, 175, 55, 0.2);
+        }
 
-.download-progress-box .progress-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    color: #94a3b8;
-    margin-top: 3px;
-}
+        .lecture-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.02);
+            transition: var(--transition-smooth);
+            user-select: none;
+            width: 100%;
+        }
 
-/* ====== شارة التخزين المحلي ====== */
-.offline-badge {
-    display: none;
-    color: #10b981;
-    font-size: 10px;
-    font-weight: 700;
-    margin-top: 4px;
-}
+        .lecture-header:hover {
+            background: rgba(212, 175, 55, 0.04);
+        }
 
-.offline-badge.visible {
-    display: block;
-}
+        .lecture-header .lecture-number {
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 700;
+        }
 
-/* ============================================================
-   🎯 شبكة البطاقات
-   ============================================================ */
-#foldersGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 14px;
-    padding: 6px 0;
-}
+        .lecture-header .lecture-week {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(255,255,255,0.04);
+            padding: 2px 12px;
+            border-radius: 12px;
+        }
 
-/* ============================================================
-   📱 استجابة للشاشات الصغيرة
-   ============================================================ */
-@media (max-width: 560px) {
-    #foldersGrid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-        gap: 12px;
-    }
-    
-    .post-card-advanced {
-        padding: 10px 6px;
-        min-height: 160px;
-        border-radius: 14px;
-    }
-    
-    .post-card-advanced .folder-name1 {
-        font-size: 14px;
-    }
-    
-    .post-card-advanced .folder-icon-big {
-        width: 40px;
-        height: 40px;
-        transform: scale(1.8);
-    }
-    
-    .post-details-text {
-        font-size: 10px !important;
-        -webkit-line-clamp: 1 !important;
-    }
-    
-    .file-name-line {
-        font-size: 11px !important;
-    }
-    
-    .post-meta-info {
-        font-size: 9px;
-    }
-    
-    .doc-btn {
-        padding: 4px 10px;
-        font-size: 10px;
-    }
-}
+        .lecture-header .lecture-toggle {
+            color: var(--text-muted);
+            font-size: 14px;
+            transition: var(--transition-smooth);
+        }
 
-@media (max-width: 400px) {
-    #foldersGrid {
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        gap: 10px;
-    }
-    
-    .post-card-advanced {
-        padding: 8px 4px;
-        min-height: 140px;
-        border-radius: 12px;
-    }
-    
-    .post-card-advanced .folder-name1 {
-        font-size: 12px;
-    }
-    
-    .post-card-advanced .folder-icon-big {
-        width: 32px;
-        height: 32px;
-        transform: scale(1.5);
-    }
-    
-    .post-details-text {
-        font-size: 9px !important;
-        -webkit-line-clamp: 1 !important;
-    }
-    
-    .file-name-line {
-        font-size: 10px !important;
-        -webkit-line-clamp: 1 !important;
-    }
-    
-    .file-ext-badge {
-        font-size: 9px !important;
-    }
-    
-    .post-meta-info {
-        font-size: 8px;
-        gap: 1px;
-    }
-    
-    .doc-btn {
-        padding: 3px 8px;
-        font-size: 9px;
-    }
-    
-    .post-square-actions {
-        gap: 4px;
-    }
-}
+        .lecture-body {
+            padding: 0 16px 16px;
+            max-height: 600px;
+            overflow-y: auto;
+            width: 100%;
+        }
 
-/* ============================================================
-   🎯 شبكة البطاقات - تحسين التوزيع
-   ============================================================ */
-#foldersGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 16px;
-    padding: 8px 0;
-}
+        .lecture-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .lecture-body::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+        }
+        .lecture-body::-webkit-scrollbar-thumb {
+            background: var(--gold-primary);
+            border-radius: 4px;
+        }
 
-/* ============================================================
-   📱 استجابة للشاشات الصغيرة
-   ============================================================ */
-@media (max-width: 560px) {
-    #foldersGrid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 12px;
-    }
-    
-    .post-card-advanced {
-        padding: 14px 10px;
-        min-height: 180px;
-        border-radius: 14px;
-    }
-    
-    .post-card-advanced .post-icon {
-        font-size: 28px;
-    }
-    
-    .post-card-advanced .post-title {
-        font-size: 13px;
-    }
-    
-    .post-card-advanced .post-text {
-        font-size: 10px !important;
-        max-height: 50px;
-    }
-    
-    .post-card-advanced .post-meta {
-        font-size: 9px;
-        gap: 2px 8px;
-    }
-    
-    .post-card-advanced .post-actions .doc-btn {
-        padding: 4px 12px;
-        font-size: 9px;
-    }
-    
-    .post-card-advanced .post-file-info {
-        font-size: 10px;
-        padding: 3px 6px;
-    }
-    
-    .post-card-advanced .post-file-info .file-name {
-        font-size: 10px;
-    }
-    
-    .post-card-advanced .post-file-info .file-ext {
-        font-size: 8px;
-        padding: 1px 10px;
-    }
-}
+        .lecture-section {
+            margin-top: 16px;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            width: 100%;
+        }
 
-@media (max-width: 400px) {
-    #foldersGrid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-        gap: 10px;
-    }
-    
-    .post-card-advanced {
-        padding: 10px 8px;
-        min-height: 160px;
-        border-radius: 12px;
-    }
-    
-    .post-card-advanced .post-icon {
-        font-size: 24px;
-    }
-    
-    .post-card-advanced .post-title {
-        font-size: 12px;
-    }
-    
-    .post-card-advanced .post-text {
-        font-size: 9px !important;
-        max-height: 40px;
-    }
-    
-    .post-card-advanced .post-meta {
-        font-size: 8px;
-        gap: 1px 6px;
-    }
-    
-    .post-card-advanced .post-actions .doc-btn {
-        padding: 3px 10px;
-        font-size: 8px;
-    }
-    
-    .post-card-advanced .post-file-info {
-        font-size: 9px;
-        padding: 2px 4px;
-    }
-    
-    .post-card-advanced .post-file-info .file-name {
-        font-size: 9px;
-        max-width: 60%;
-    }
-    
-    .post-card-advanced .post-file-info .file-ext {
-        font-size: 7px;
-        padding: 1px 8px;
-    }
-    
-    .post-card-advanced .post-file-info .file-size {
-        font-size: 8px;
-    }
-}
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--glass-border);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .section-header .btn-add-content {
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            color: var(--gold-primary);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .section-header .btn-add-content:hover {
+            background: rgba(212, 175, 55, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .lecture-posts, .lecture-assignments, .lecture-completed {
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .lecture-posts::-webkit-scrollbar,
+        .lecture-assignments::-webkit-scrollbar,
+        .lecture-completed::-webkit-scrollbar {
+            width: 3px;
+        }
+        .lecture-posts::-webkit-scrollbar-track,
+        .lecture-assignments::-webkit-scrollbar-track,
+        .lecture-completed::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+        }
+        .lecture-posts::-webkit-scrollbar-thumb,
+        .lecture-assignments::-webkit-scrollbar-thumb,
+        .lecture-completed::-webkit-scrollbar-thumb {
+            background: var(--gold-primary);
+            border-radius: 4px;
+        }
+
+        .empty-lecture-content {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-align: center;
+            padding: 16px;
+        }
+
+        /* ====== عناصر المنشور داخل المحاضرة ====== */
+        .post-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            position: relative;
+            transition: var(--transition-smooth);
+            width: 100%;
+        }
+
+        .post-item:hover {
+            border-color: rgba(212, 175, 55, 0.15);
+        }
+
+        .post-item .post-author {
+            color: var(--gold-primary);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .post-item .post-time {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .post-item .post-title {
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .post-item .post-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.4;
+            margin-top: 2px;
+        }
+
+        .post-item .post-file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+        }
+
+        .post-item .post-file-info .file-name {
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .post-item .post-file-info .file-ext {
+            color: var(--text-muted);
+            font-size: 9px;
+            background: rgba(255,255,255,0.04);
+            padding: 1px 8px;
+            border-radius: 8px;
+        }
+
+        .post-item .post-file-info .file-size {
+            color: var(--info);
+            font-size: 9px;
+        }
+
+        .post-item .post-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .post-item .post-actions .doc-btn {
+            padding: 4px 12px;
+            font-size: 10px;
+            min-height: 28px;
+        }
+
+        .post-item .btn-delete-post {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-radius: 4px;
+            color: var(--danger);
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .post-item .btn-delete-post:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* ====== عناصر التكاليف ====== */
+        .assignment-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            transition: var(--transition-smooth);
+            position: relative;
+            width: 100%;
+        }
+
+        .assignment-card.status-green {
+            border-color: rgba(74, 222, 128, 0.2);
+        }
+        .assignment-card.status-yellow {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.04);
+        }
+        .assignment-card.status-red {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.06);
+        }
+
+        .assignment-card .assignment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .assignment-card .assignment-title {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .assignment-card .assignment-due {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .assignment-card.status-green .assignment-due { color: var(--success); }
+        .assignment-card.status-yellow .assignment-due { color: var(--warning); }
+        .assignment-card.status-red .assignment-due { color: var(--danger); }
+
+        .assignment-card .assignment-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .assignment-card .assignment-files {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .assignment-card .assignment-file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .assignment-card .assignment-file-item .file-ext {
+            color: var(--text-muted);
+            font-size: 9px;
+            background: rgba(255,255,255,0.04);
+            padding: 1px 8px;
+            border-radius: 8px;
+        }
+
+        .assignment-card .assignment-file-item .assignment-actions {
+            display: flex;
+            gap: 4px;
+            margin-right: auto;
+        }
+
+        .assignment-card .assignment-file-item .assignment-actions .doc-btn {
+            padding: 3px 10px;
+            font-size: 9px;
+            min-height: 24px;
+        }
+
+        .assignment-card .assignment-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .assignment-card .assignment-actions-row {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .assignment-card .btn-complete {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            color: var(--success);
+            padding: 5px 16px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .assignment-card .btn-complete:hover {
+            background: rgba(74, 222, 128, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .assignment-card .assignment-completed {
+            color: var(--success);
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+            padding: 4px 10px;
+            background: rgba(74, 222, 128, 0.04);
+            border-radius: 6px;
+            border: 1px solid rgba(74, 222, 128, 0.08);
+        }
+
+        .assignment-card .btn-delete-assignment {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-radius: 4px;
+            color: var(--danger);
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .assignment-card .btn-delete-assignment:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* ====== عناصر التكاليف المنجزة ====== */
+        .completed-item {
+            background: rgba(74, 222, 128, 0.04);
+            border: 1px solid rgba(74, 222, 128, 0.1);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            width: 100%;
+        }
+
+        .completed-item .completed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .completed-item .completed-header .completed-by {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .completed-item .completed-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .completed-item .completed-file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .completed-item .completed-actions {
+            display: flex;
+            gap: 4px;
+            margin-right: auto;
+        }
+
+        .completed-item .completed-actions .doc-btn {
+            padding: 3px 10px;
+            font-size: 9px;
+            min-height: 24px;
+        }
+
+        .completed-item .completed-time {
+            color: var(--text-muted);
+            font-size: 10px;
+            margin-top: 4px;
+        }
 
         /* ============================================================
            📋 لوحة الإشعارات
@@ -1091,6 +1300,11 @@
             border-color: rgba(212, 175, 55, 0.12);
         }
 
+        .notif-item-advanced.urgent-notif {
+            border-color: rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.04);
+        }
+
         .notif-item-advanced .notif-row {
             display: flex;
             align-items: flex-start;
@@ -1120,6 +1334,15 @@
             height: 7px;
             border-radius: 50%;
             flex-shrink: 0;
+        }
+
+        .notif-item-advanced .notif-row .notif-body .notif-title-row .urgent-badge {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            font-size: 9px;
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-weight: 700;
         }
 
         .notif-item-advanced .notif-row .notif-body .notif-message {
@@ -1217,7 +1440,7 @@
 
         .modal-box-advanced {
             width: 100%;
-            max-width: 440px;
+            max-width: 480px;
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -1227,6 +1450,8 @@
             border-radius: var(--radius-card);
             backdrop-filter: blur(30px);
             box-shadow: var(--shadow-card);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-box-advanced .modal-title {
@@ -1241,7 +1466,8 @@
         }
 
         .modal-box-advanced input,
-        .modal-box-advanced textarea {
+        .modal-box-advanced textarea,
+        .modal-box-advanced select {
             width: 100%;
             padding: 12px 14px;
             background: rgba(0, 0, 0, 0.35);
@@ -1255,12 +1481,14 @@
         }
 
         .modal-box-advanced input:focus,
-        .modal-box-advanced textarea:focus {
+        .modal-box-advanced textarea:focus,
+        .modal-box-advanced select:focus {
             border-color: var(--gold-primary);
             box-shadow: var(--gold-glow);
         }
 
         .modal-box-advanced textarea { resize: vertical; min-height: 70px; }
+        .modal-box-advanced select option { background: var(--primary-surface); }
 
         .modal-box-advanced .file-upload-area {
             display: flex;
@@ -1282,6 +1510,22 @@
             color: var(--text-muted);
             font-size: 12px;
             font-family: 'Tajawal', sans-serif;
+        }
+
+        .modal-box-advanced .deadline-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .modal-box-advanced .deadline-group select,
+        .modal-box-advanced .deadline-group input {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .modal-box-advanced .deadline-group input[type="number"] {
+            flex: 0 1 120px;
         }
 
         .modal-actions-advanced {
@@ -1453,7 +1697,7 @@
 
         .diagnostics-modal-advanced .modal-content .diag-item .diag-status.online { color: var(--success); }
         .diagnostics-modal-advanced .modal-content .diag-item .diag-status.offline { color: var(--danger); }
-        .diagnostics-modal-advanced .modal-content .diag-item .diag-status.warning { color: #f59e0b; }
+        .diagnostics-modal-advanced .modal-content .diag-item .diag-status.warning { color: var(--warning); }
 
         .diagnostics-modal-advanced .modal-content .storage-section {
             background: rgba(255,255,255,0.02);
@@ -1543,7 +1787,7 @@
             .study-container { gap: 10px; padding-bottom: 80px; }
 
             #foldersGrid {
-                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
                 gap: 10px;
             }
 
@@ -1551,8 +1795,8 @@
             .folder-card-advanced .folder-icon-large { font-size: 30px; }
             .folder-card-advanced .folder-name { font-size: 12px; }
 
-            .post-card-advanced { padding: 12px 8px; min-height: 140px; }
-            .post-card-advanced .post-title { font-size: 12px; }
+            .post-card-advanced { padding: 12px 8px; min-height: 150px; }
+            .post-card-advanced .folder-name1 { font-size: 14px; }
 
             .folder-header-advanced .folder-title h2 { font-size: 16px; }
             .folder-header-advanced .folder-title .title-icon { font-size: 22px; }
@@ -1571,11 +1815,41 @@
             .notifications-panel-advanced { max-width: 100%; right: -100%; }
             .modal-box-advanced { padding: 20px 16px; }
             .diagnostics-modal-advanced .modal-content { padding: 16px; }
+
+            .lecture-header { padding: 12px 14px; }
+            .lecture-header .lecture-number { font-size: 13px; }
+            .lecture-body { padding: 0 10px 12px; max-height: 400px; }
+            .lecture-posts, .lecture-assignments, .lecture-completed { padding: 8px 10px; max-height: 300px; }
+            .section-header { font-size: 12px; padding: 8px 10px; }
+
+            .doc-btn {
+                padding: 4px 10px;
+                font-size: 10px;
+                min-height: 28px;
+            }
+
+            .assignment-card .assignment-file-item .assignment-actions .doc-btn {
+                padding: 2px 8px;
+                font-size: 8px;
+                min-height: 22px;
+            }
+
+            .post-item .post-actions .doc-btn {
+                padding: 3px 10px;
+                font-size: 9px;
+                min-height: 24px;
+            }
+
+            .completed-item .completed-actions .doc-btn {
+                padding: 2px 8px;
+                font-size: 8px;
+                min-height: 22px;
+            }
         }
 
         @media (max-width: 400px) {
             #foldersGrid {
-                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
                 gap: 8px;
             }
 
@@ -1583,16 +1857,81 @@
             .folder-card-advanced .folder-icon-large { font-size: 24px; }
             .folder-card-advanced .folder-name { font-size: 11px; }
 
-            .post-card-advanced { padding: 10px 6px; min-height: 120px; }
-            .post-card-advanced .post-title { font-size: 11px; }
-            .post-card-advanced .post-actions .doc-btn { font-size: 9px; padding: 3px 10px; }
+            .post-card-advanced { padding: 10px 6px; min-height: 130px; }
+            .post-card-advanced .folder-name1 { font-size: 12px; }
 
             .action-buttons-group .btn-action { padding: 4px 10px; font-size: 10px; gap: 4px; }
             .btn-notification { padding: 4px 8px; font-size: 11px; min-width: 32px; }
             .btn-notification .notif-badge-inline { width: 16px; height: 16px; font-size: 7px; top: -4px; right: -4px; }
 
             .folder-header-advanced .folder-title h2 { font-size: 14px; }
+            .lecture-header .lecture-number { font-size: 12px; }
+            .lecture-header .lecture-week { font-size: 10px; }
+
+            .doc-btn {
+                padding: 3px 8px;
+                font-size: 9px;
+                min-height: 24px;
+            }
+
+            .post-square-actions {
+                gap: 4px;
+            }
         }
+/* ============================================================
+   🔧 تعديل لعرض المحاضرات - كل محاضرة في سطر منفصل
+   ============================================================ */
+
+/* إلغاء تأثير الشبكة على المحاضرات */
+#foldersGrid .lecture-card {
+    display: block !important;
+    width: 100% !important;
+    grid-column: 1 / -1 !important;
+    margin-bottom: 16px !important;
+}
+
+/* التأكد من أن كل محاضرة تأخذ عرض كامل */
+.lecture-card {
+    display: block !important;
+    width: 100% !important;
+    clear: both !important;
+}
+
+/* منع أي تأثير للشبكة على محتويات المحاضرة */
+.lecture-card * {
+    max-width: 100% !important;
+}
+
+/* التأكد من أن أقسام المحاضرة تأخذ عرض كامل */
+.lecture-section {
+    width: 100% !important;
+    display: block !important;
+}
+
+.lecture-posts,
+.lecture-assignments,
+.lecture-completed {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* عناصر المنشورات داخل المحاضرة */
+.post-item {
+    width: 100% !important;
+    display: block !important;
+}
+
+/* عناصر التكاليف */
+.assignment-card {
+    width: 100% !important;
+    display: block !important;
+}
+
+.completed-item {
+    width: 100% !important;
+    display: block !important;
+}
     </style>
 </head>
 <body>
@@ -1612,13 +1951,12 @@
             <span id="userDisplay" style="font-size:11px;color:var(--text-muted);">👤 زائر</span>
         </div>
         <div class="status-right">
-         <div class="storage-indicator" id="storageIndicator" onclick="openSystemDiagnosticsModal()" style="cursor: pointer;">
-    <span>💾</span>
-    <div class="storage-bar">
-        <div class="storage-fill" id="storageFill" style="width:0%;"></div>
-    </div>
-    <span id="storagePercent" style="font-size:10px;font-weight:600;">0%</span>
-
+            <div class="storage-indicator" id="storageIndicator" onclick="openSystemDiagnosticsModal()" style="cursor: pointer;">
+                <span>💾</span>
+                <div class="storage-bar">
+                    <div class="storage-fill" id="storageFill" style="width:0%;"></div>
+                </div>
+                <span id="storagePercent" style="font-size:10px;font-weight:600;">0%</span>
             </div>
         </div>
     </div>
@@ -1627,7 +1965,7 @@
     <div class="search-wrapper">
         <div class="search-bar-advanced" id="searchBar">
             <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" placeholder="ابحث عن مجلد أو منشور..." oninput="handleSearch(this.value)">
+            <input type="text" id="searchInput" placeholder="ابحث عن مجلد، منشور، أو تكليف..." oninput="handleSearch(this.value)">
             <span class="search-clear" id="searchClear" onclick="clearSearch()">✕</span>
         </div>
         <div class="search-results-dropdown" id="searchResults"></div>
@@ -1644,15 +1982,13 @@
             <span class="title-icon">📂</span>
             <h2 id="currentFolderTitle">المواد الدراسية</h2>
             <span class="folder-count-badge" id="itemCount">0</span>
-<button class="btn-notification" id="notifTrigger" onclick="toggleNotificationsPanel()" aria-label="الإشعارات">
-                🔔
-                <span class="notif-badge-inline" id="notifBadge">0</span>
-            </button>
         </div>
         
         <div class="action-buttons-group">
-            <!-- ====== 🔔 زر الإشعارات (ضمن الأزرار) ====== -->
-            
+            <button class="btn-notification" id="notifTrigger" onclick="toggleNotificationsPanel()" aria-label="الإشعارات">
+                🔔
+                <span class="notif-badge-inline" id="notifBadge">0</span>
+            </button>
 
             <button class="btn-action btn-secondary" onclick="goHome()">🏠 الرئيسية</button>
             <button class="btn-action btn-secondary" id="btnBack" onclick="goBack()" style="display:none;">↩️ رجوع</button>
@@ -1710,6 +2046,10 @@
         <div class="modal-title">📁 إنشاء مجلد جديد</div>
         <input type="text" id="newFolderName" placeholder="أدخل اسم المجلد...">
         <input type="text" id="newFolderDescription" placeholder="وصف المجلد (اختياري)...">
+        <select id="newFolderType">
+            <option value="normal">📁 مجلد عادي</option>
+            <option value="subject">📚 مادة دراسية (15 محاضرة تلقائية)</option>
+        </select>
         <div class="modal-actions-advanced">
             <button class="btn-modal btn-confirm" onclick="confirmCreateFolder()">إنشاء</button>
             <button class="btn-modal btn-cancel" onclick="closeModal('createFolderModal')">إلغاء</button>
@@ -1723,6 +2063,10 @@
         <div class="modal-title">✏️ تعديل المجلد</div>
         <input type="text" id="editFolderName" placeholder="أدخل الاسم الجديد...">
         <input type="text" id="editFolderDescription" placeholder="وصف المجلد (اختياري)...">
+        <select id="editFolderType">
+            <option value="normal">📁 مجلد عادي</option>
+            <option value="subject">📚 مادة دراسية</option>
+        </select>
         <div class="modal-actions-advanced">
             <button class="btn-modal btn-confirm" onclick="confirmEditFolder()">تعديل</button>
             <button class="btn-modal btn-cancel" onclick="closeModal('editFolderModal')">إلغاء</button>
@@ -1734,11 +2078,12 @@
 <div class="modal-overlay-advanced" id="createPostModal">
     <div class="modal-box-advanced">
         <div class="modal-title">📝 إدراج منشور جديد</div>
+        <input type="hidden" id="newPostLectureId" value="">
         <input type="text" id="newPostTitle" placeholder="عنوان المنشور...">
         <textarea id="newPostText" placeholder="تفاصيل المنشور..."></textarea>
         <div class="file-upload-area">
-            <label>📎 إرفاق ملف (صورة / PDF / مستند):</label>
-            <input type="file" id="newPostFile" accept="image/*,application/pdf,.doc,.docx,.txt">
+            <label>📎 إرفاق ملفات:</label>
+            <input type="file" id="newPostFile" accept="image/*,application/pdf,.doc,.docx,.txt,.html,.htm" multiple>
         </div>
         <div class="modal-actions-advanced">
             <button class="btn-modal btn-confirm" onclick="confirmCreatePost()">نشر</button>
@@ -1754,12 +2099,41 @@
         <input type="text" id="editPostTitle" placeholder="عنوان المنشور...">
         <textarea id="editPostText" placeholder="تفاصيل المنشور..."></textarea>
         <div class="file-upload-area">
-            <label>📎 تغيير الملف (اختياري):</label>
-            <input type="file" id="editPostFile" accept="image/*,application/pdf,.doc,.docx,.txt">
+            <label>📎 تغيير الملفات (اختياري):</label>
+            <input type="file" id="editPostFile" accept="image/*,application/pdf,.doc,.docx,.txt" multiple>
         </div>
         <div class="modal-actions-advanced">
             <button class="btn-modal btn-confirm" onclick="confirmEditPost()">تعديل</button>
             <button class="btn-modal btn-cancel" onclick="closeModal('editPostModal')">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== إنشاء تكليف ====== -->
+<div class="modal-overlay-advanced" id="createAssignmentModal">
+    <div class="modal-box-advanced">
+        <div class="modal-title">📋 إضافة تكليف جديد</div>
+        <input type="hidden" id="assignmentLectureId" value="">
+        <input type="text" id="assignmentTitle" placeholder="عنوان التكليف...">
+        <textarea id="assignmentText" placeholder="تفاصيل التكليف والمتطلبات..."></textarea>
+        <div class="deadline-group">
+            <select id="assignmentDeadlineType">
+                <option value="day">⏰ يوم واحد</option>
+                <option value="two_days">⏰ يومان</option>
+                <option value="week" selected>⏰ أسبوع</option>
+                <option value="two_weeks">⏰ أسبوعان</option>
+                <option value="month">⏰ شهر</option>
+                <option value="custom">⏰ مخصص</option>
+            </select>
+            <input type="number" id="assignmentCustomDays" placeholder="عدد الأيام" min="1" style="display:none; width:100px;">
+        </div>
+        <div class="file-upload-area">
+            <label>📎 إرفاق متطلبات التكليف:</label>
+            <input type="file" id="assignmentFile" accept="image/*,application/pdf,.doc,.docx,.txt" multiple>
+        </div>
+        <div class="modal-actions-advanced">
+            <button class="btn-modal btn-confirm" onclick="confirmCreateAssignment()">نشر التكليف</button>
+            <button class="btn-modal btn-cancel" onclick="closeModal('createAssignmentModal')">إلغاء</button>
         </div>
     </div>
 </div>
@@ -1839,7 +2213,7 @@
 <!-- ============================================================
      📄 ملف التطبيق الرئيسي
      ============================================================ -->
-<script src="study-materials.js?v=9"></script>
+<script src="study-materials.js?v=11"></script>
 
 <!-- ============================================================
      ⚙️ تسجيل Service Workers
