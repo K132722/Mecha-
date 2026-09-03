@@ -2449,6 +2449,9 @@ async function requestNotificationPermission() {
 
 // -------- 16.7 تبديل لوحة الإشعارات --------
 function toggleNotificationsPanel() {
+    if (!isNotificationsPanelOpen && document.getElementById('groupChatPanel')?.classList.contains('open')) {
+        closeGroupChatPanel();
+    }
     isNotificationsPanelOpen = !isNotificationsPanelOpen;
     const panel = document.getElementById('notificationsPanel');
     const overlay = document.getElementById('notificationsOverlay');
@@ -4172,15 +4175,21 @@ function renderStudyFolderContent(data) {
                 const files = renderStudyFileList(pathKey, originalIndex, post.files, 'lecture', post.id || lectureNumber);
                 const assignments = studyArray(post.assignments);
                 return `
-                    <article class="lecture-card" id="lectureCard-${lectureNumber}">
-                        <div class="lecture-header">
-                            <div>
+                    <article class="lecture-card collapsed" id="lectureCard-${lectureNumber}" data-lecture-card="${lectureNumber}">
+                        <div class="lecture-header" onclick="toggleLectureCard(event, ${lectureNumber})" role="button" aria-controls="lectureContent-${lectureNumber}" aria-expanded="false">
+                            <div class="lecture-heading">
+                                <span class="lecture-toggle-icon" aria-hidden="true">⌄</span>
+                                <div>
                                 <div class="lecture-title">${escapeHtml(post.title || getLectureTitle(lectureNumber))}</div>
                                 <div class="lecture-week">الأسبوع ${lectureNumber === 15 ? 'الأخير' : lectureNumber}</div>
+                                </div>
                             </div>
-                            ${userCanAdd ? `<button class="mini-add-btn" onclick="openLectureFileModal(${originalIndex})">➕ إدراج ملفات</button>` : ''}
+                            <div class="lecture-header-actions">
+                                <button class="lecture-comments-btn" onclick="event.stopPropagation();openLectureComments(${studySafeJs(pathKey)}, ${originalIndex}, ${studySafeJs(post.id || lectureNumber)}, ${studySafeJs(post.title || getLectureTitle(lectureNumber))}, ${lectureNumber})">💬 التعليقات</button>
+                                ${userCanAdd ? `<button class="mini-add-btn" onclick="event.stopPropagation();openLectureFileModal(${originalIndex})">➕ إدراج ملفات</button>` : ''}
+                            </div>
                         </div>
-                        <div class="lecture-scroll">
+                        <div class="lecture-scroll" id="lectureContent-${lectureNumber}" hidden>
                             <section class="lecture-section">
                                 <div class="lecture-section-title">
                                     <span>📖 ملفات المحاضرة</span>
@@ -4891,6 +4900,564 @@ function startPeriodicCacheUpdate() {
         const pathKey = getPathKey(currentStudyPath);
         await refreshFolderInBackground(pathKey);
     }, 5 * 60 * 1000);
+}
+
+/* ========================================================================
+   📚 تفاعل بطاقات المحاضرات وتعليقات المستخدمين والدردشة الجماعية
+   ======================================================================== */
+let currentLectureCommentsContext = null;
+const lectureCommentsListeners = new Map();
+let groupChatMessages = [];
+let groupChatLectureOptions = [];
+let groupChatListener = null;
+let groupChatComposerBound = false;
+
+function toggleLectureCard(event, lectureNumber) {
+    event?.stopPropagation?.();
+    const card = document.getElementById(`lectureCard-${Number(lectureNumber)}`);
+    const content = document.getElementById(`lectureContent-${Number(lectureNumber)}`);
+    if (!card || !content) return;
+    const willOpen = content.hidden;
+    content.hidden = !willOpen;
+    card.classList.toggle('is-open', willOpen);
+    card.classList.toggle('collapsed', !willOpen);
+    const header = card.querySelector('.lecture-header');
+    const icon = card.querySelector('.lecture-toggle-icon');
+    header?.setAttribute('aria-expanded', String(willOpen));
+    if (icon) icon.textContent = willOpen ? '⌃' : '⌄';
+}
+
+function lectureCommentsStorageKey(pathKey, lectureId) {
+    return `study_comments_${encodeURIComponent(`${pathKey}_${lectureId}`)}`;
+}
+
+function readLectureCommentsLocal(pathKey, lectureId) {
+    try {
+        const raw = localStorage.getItem(lectureCommentsStorageKey(pathKey, lectureId));
+        const value = raw ? JSON.parse(raw) : [];
+        return studyArray(value).filter(comment => comment?.text);
+    } catch (error) {
+        return [];
+    }
+}
+
+function saveLectureCommentsLocal(pathKey, lectureId, comments) {
+    try {
+        localStorage.setItem(
+            lectureCommentsStorageKey(pathKey, lectureId),
+            JSON.stringify(studyArray(comments).slice(-300))
+        );
+    } catch (error) {
+        console.warn('تعذر حفظ تعليقات المحاضرة محلياً:', error);
+    }
+}
+
+function lectureCommentsPath(pathKey, lectureId) {
+    return `study_material_comments/${pathKey}/${encodeURIComponent(String(lectureId))}`;
+}
+
+function mergeLectureComments(localComments, serverComments) {
+    const merged = new Map();
+    studyArray(localComments).forEach(comment => {
+        if (comment?.id) merged.set(String(comment.id), comment);
+    });
+    studyArray(serverComments).forEach(comment => {
+        if (comment?.id) merged.set(String(comment.id), { ...comment, pending: false });
+    });
+    return [...merged.values()]
+        .filter(comment => comment?.text)
+        .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0))
+        .slice(-300);
+}
+
+function renderLectureComments(comments) {
+    const list = document.getElementById('lectureCommentsList');
+    if (!list) return;
+    const items = studyArray(comments);
+    if (!items.length) {
+        list.innerHTML = '<div class="comments-empty">💬 لا توجد تعليقات بعد.<br>كن أول من يشارك رأيه في هذه المحاضرة.</div>';
+        return;
+    }
+    list.innerHTML = items.map(comment => `
+        <article class="comment-item">
+            <div class="comment-meta">
+                <span class="comment-author">👤 ${escapeHtml(comment.userName || comment.user || 'مستخدم')}</span>
+                <span class="comment-time">${escapeHtml(studyDate(comment.timestamp))}</span>
+            </div>
+            <div class="comment-text">${escapeHtml(comment.text)}</div>
+            ${comment.pending ? '<span class="comment-pending">⏳ محفوظ محلياً وسيتم نشره عند عودة الاتصال</span>' : ''}
+        </article>
+    `).join('');
+    list.scrollTop = list.scrollHeight;
+}
+
+function attachLectureCommentsToCurrentPost(context, comments) {
+    if (!context || getPathKey(currentStudyPath) !== context.pathKey) return;
+    const post = getStudyPost(globalPostsData, context.lectureIndex);
+    if (!post) return;
+    post.comments = studyArray(comments);
+    void cacheFolderData(context.pathKey, globalPostsData);
+}
+
+function listenToLectureComments(context) {
+    if (!studyDb || !isOnline) return;
+    const key = `${context.pathKey}|${context.lectureId}`;
+    if (lectureCommentsListeners.has(key)) return;
+    const ref = studyDb.ref(lectureCommentsPath(context.pathKey, context.lectureId));
+    const listener = snapshot => {
+        const serverComments = Object.entries(snapshot.val() || {}).map(([id, comment]) => ({
+            ...comment,
+            id
+        }));
+        const merged = mergeLectureComments(readLectureCommentsLocal(context.pathKey, context.lectureId), serverComments);
+        saveLectureCommentsLocal(context.pathKey, context.lectureId, merged);
+        attachLectureCommentsToCurrentPost(context, merged);
+        if (currentLectureCommentsContext?.listenerKey === key) {
+            currentLectureCommentsContext.comments = merged;
+            renderLectureComments(merged);
+        }
+    };
+    ref.on('value', listener, error => console.warn('تعذر متابعة تعليقات المحاضرة:', error));
+    lectureCommentsListeners.set(key, { ref, listener });
+}
+
+async function syncPendingLectureComments(pathKey, lectureId) {
+    if (!studyDb || !isOnline) return;
+    const comments = readLectureCommentsLocal(pathKey, lectureId);
+    const pending = comments.filter(comment => comment.pending);
+    if (!pending.length) return;
+    const remaining = [...comments];
+    for (const comment of pending) {
+        try {
+            const ref = studyDb.ref(lectureCommentsPath(pathKey, lectureId)).push();
+            const serverComment = { ...comment, id: ref.key };
+            delete serverComment.pending;
+            await ref.set(studyStripTransient(serverComment));
+            const index = remaining.findIndex(item => item.id === comment.id);
+            if (index >= 0) remaining.splice(index, 1, serverComment);
+        } catch (error) {
+            console.warn('تعذر مزامنة تعليق مؤجل:', error);
+        }
+    }
+    saveLectureCommentsLocal(pathKey, lectureId, remaining);
+    if (currentLectureCommentsContext?.pathKey === pathKey &&
+        String(currentLectureCommentsContext.lectureId) === String(lectureId)) {
+        currentLectureCommentsContext.comments = remaining;
+        renderLectureComments(remaining);
+    }
+}
+
+function openLectureComments(pathKey, lectureIndex, lectureId, title, lectureNumber) {
+    currentLectureCommentsContext = {
+        pathKey,
+        lectureIndex,
+        lectureId,
+        lectureNumber,
+        title,
+        listenerKey: `${pathKey}|${lectureId}`,
+        comments: readLectureCommentsLocal(pathKey, lectureId)
+    };
+    const titleElement = document.getElementById('commentsLectureTitle');
+    const input = document.getElementById('newLectureComment');
+    if (titleElement) titleElement.textContent = `📚 ${title || `المحاضرة رقم ${lectureNumber}`}`;
+    if (input) input.value = '';
+    renderLectureComments(currentLectureCommentsContext.comments);
+    document.getElementById('lectureCommentsModal')?.classList.add('active');
+    listenToLectureComments(currentLectureCommentsContext);
+    void syncPendingLectureComments(pathKey, lectureId);
+}
+
+function closeLectureComments() {
+    document.getElementById('lectureCommentsModal')?.classList.remove('active');
+    currentLectureCommentsContext = null;
+}
+
+async function addLectureComment() {
+    const context = currentLectureCommentsContext;
+    const input = document.getElementById('newLectureComment');
+    const text = input?.value.trim() || '';
+    const user = getStudyUser();
+    if (!context) return;
+    if (!user) {
+        alert('⚠️ يجب تسجيل الدخول حتى يظهر اسمك في التعليق.');
+        return;
+    }
+    if (!text) {
+        alert('⚠️ اكتب تعليقاً قبل النشر.');
+        input?.focus();
+        return;
+    }
+
+    const localComment = {
+        id: `local_comment_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        userId: String(user.id || user.phone || user.username || 'user'),
+        userName: studyUserLabel(user),
+        text,
+        timestamp: Date.now(),
+        pending: !(isOnline && studyDb)
+    };
+    const next = mergeLectureComments(
+        readLectureCommentsLocal(context.pathKey, context.lectureId),
+        [localComment]
+    );
+    saveLectureCommentsLocal(context.pathKey, context.lectureId, next);
+    context.comments = next;
+    attachLectureCommentsToCurrentPost(context, next);
+    renderLectureComments(next);
+    if (input) input.value = '';
+
+    if (isOnline && studyDb) {
+        try {
+            const ref = studyDb.ref(lectureCommentsPath(context.pathKey, context.lectureId)).push();
+            const published = { ...localComment, id: ref.key };
+            delete published.pending;
+            await ref.set(studyStripTransient(published));
+            const publishedComments = readLectureCommentsLocal(context.pathKey, context.lectureId)
+                .filter(comment => comment.id !== localComment.id);
+            publishedComments.push(published);
+            const merged = mergeLectureComments(publishedComments, []);
+            saveLectureCommentsLocal(context.pathKey, context.lectureId, merged);
+            context.comments = merged;
+            renderLectureComments(merged);
+        } catch (error) {
+            console.warn('تعذر نشر التعليق، سيبقى محفوظاً محلياً:', error);
+            alert('⚠️ تعذر الاتصال حالياً، تم حفظ التعليق محلياً وسيُنشر عند عودة الاتصال.');
+        }
+    } else {
+        alert('📦 لا يوجد اتصال حالياً، تم حفظ التعليق محلياً.');
+    }
+}
+
+function groupChatStorageKey() {
+    return 'study_group_chat_messages';
+}
+
+function cleanGroupChatMessage(message) {
+    return {
+        id: message.id,
+        senderId: String(message.senderId || ''),
+        senderName: message.senderName || 'مستخدم',
+        text: message.text || '',
+        timestamp: Number(message.timestamp || Date.now()),
+        pending: Boolean(message.pending),
+        lectureRef: message.lectureRef || null,
+        files: studyArray(message.files).map(file => {
+            const clean = { ...file };
+            delete clean.fileBlob;
+            delete clean.blob;
+            return clean;
+        })
+    };
+}
+
+function readGroupChatLocal() {
+    try {
+        const raw = localStorage.getItem(groupChatStorageKey());
+        return raw ? studyArray(JSON.parse(raw)) : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function saveGroupChatLocal(messages) {
+    try {
+        localStorage.setItem(
+            groupChatStorageKey(),
+            JSON.stringify(studyArray(messages).map(cleanGroupChatMessage).slice(-200))
+        );
+    } catch (error) {
+        console.warn('تعذر حفظ الدردشة محلياً:', error);
+    }
+}
+
+function mergeGroupChatMessages(localMessages, serverMessages) {
+    const merged = new Map();
+    studyArray(localMessages).forEach(message => {
+        if (message?.id) merged.set(String(message.id), message);
+    });
+    studyArray(serverMessages).forEach(message => {
+        if (message?.id) merged.set(String(message.id), { ...message, pending: false });
+    });
+    return [...merged.values()]
+        .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0))
+        .slice(-200);
+}
+
+function renderGroupChatMessages() {
+    const container = document.getElementById('groupChatMessages');
+    if (!container) return;
+    if (!groupChatMessages.length) {
+        container.innerHTML = '<div class="chat-empty-state">💬<br>لا توجد رسائل بعد<br><small>ابدأ محادثة مع زملائك</small></div>';
+        return;
+    }
+    const user = getStudyUser();
+    const currentUserId = String(user?.id || user?.phone || user?.username || '');
+    container.innerHTML = groupChatMessages.map(message => {
+        const own = currentUserId && String(message.senderId) === currentUserId;
+        const files = studyArray(message.files);
+        return `
+            <article class="chat-message ${own ? 'own' : ''}">
+                <div class="chat-sender">${escapeHtml(message.senderName || 'مستخدم')}</div>
+                ${message.text ? `<div class="chat-text">${escapeHtml(message.text)}</div>` : ''}
+                ${message.lectureRef ? `
+                    <div class="chat-mention-card">
+                        <span class="chat-mention-label">📚 ${escapeHtml(message.lectureRef.title || `المحاضرة ${message.lectureRef.lectureNumber || ''}`)}</span>
+                        <button class="chat-mention-open" onclick="goToChatLecture(${studySafeJs(message.id)})">فتح المحاضرة ↗</button>
+                    </div>` : ''}
+                ${files.length ? `
+                    <div class="chat-attachments">
+                        ${files.map((file, index) => `
+                            <button class="chat-attachment" onclick="openGroupChatMedia(${studySafeJs(message.id)}, ${index})">
+                                📎 ${escapeHtml(studyFileName(file))}
+                            </button>
+                        `).join('')}
+                    </div>` : ''}
+                <span class="chat-time">${escapeHtml(studyDate(message.timestamp))}</span>
+                ${message.pending ? '<span class="chat-pending">⏳ محفوظ محلياً</span>' : ''}
+            </article>
+        `;
+    }).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
+function listenToGroupChat() {
+    if (!studyDb || !isOnline || groupChatListener) return;
+    const ref = studyDb.ref('study_group_chat/messages').limitToLast(200);
+    const listener = snapshot => {
+        const serverMessages = Object.entries(snapshot.val() || {}).map(([id, message]) => ({
+            ...message,
+            id
+        }));
+        groupChatMessages = mergeGroupChatMessages(readGroupChatLocal(), serverMessages);
+        saveGroupChatLocal(groupChatMessages);
+        renderGroupChatMessages();
+        const status = document.getElementById('groupChatStatus');
+        if (status) status.textContent = 'متصل · الدردشة مشتركة بين جميع المستخدمين';
+    };
+    ref.on('value', listener, error => {
+        console.warn('تعذر متابعة الدردشة الجماعية:', error);
+        const status = document.getElementById('groupChatStatus');
+        if (status) status.textContent = 'تعذر الاتصال · عرض الرسائل المحلية';
+    });
+    groupChatListener = { ref, listener };
+}
+
+async function syncPendingGroupChatMessages() {
+    if (!studyDb || !isOnline) return;
+    const pending = readGroupChatLocal().filter(message => message.pending && !studyArray(message.files).length);
+    if (!pending.length) return;
+    const current = readGroupChatLocal();
+    for (const message of pending) {
+        try {
+            const ref = studyDb.ref('study_group_chat/messages').push();
+            const published = { ...cleanGroupChatMessage(message), id: ref.key };
+            delete published.pending;
+            await ref.set(published);
+            const index = current.findIndex(item => item.id === message.id);
+            if (index >= 0) current.splice(index, 1, published);
+        } catch (error) {
+            console.warn('تعذر مزامنة رسالة دردشة مؤجلة:', error);
+        }
+    }
+    groupChatMessages = mergeGroupChatMessages(current, []);
+    saveGroupChatLocal(groupChatMessages);
+    renderGroupChatMessages();
+}
+
+async function prepareGroupChatLectureOptions() {
+    const options = [];
+    const seen = new Set();
+    const addPosts = (data, pathKey) => {
+        studyArray(data?.posts)
+            .filter(post => Number(post?.lectureNumber) >= 1 && Number(post?.lectureNumber) <= 15)
+            .forEach(post => {
+                const identity = `${pathKey}|${post.id || post.lectureNumber}`;
+                if (seen.has(identity)) return;
+                seen.add(identity);
+                options.push({
+                    path: pathKey,
+                    postId: post.id || post.lectureNumber,
+                    lectureNumber: Number(post.lectureNumber),
+                    title: post.title || getLectureTitle(Number(post.lectureNumber))
+                });
+            });
+    };
+
+    if (isStudyFolderData(globalPostsData)) {
+        addPosts(globalPostsData, getPathKey(currentStudyPath));
+    }
+    try {
+        const cached = await listStudyCachedFolders();
+        cached.forEach((data, pathKey) => addPosts(data, pathKey));
+    } catch (error) {}
+
+    groupChatLectureOptions = options.sort((a, b) =>
+        `${a.path}|${a.lectureNumber}`.localeCompare(`${b.path}|${b.lectureNumber}`, 'ar')
+    );
+    const select = document.getElementById('chatLectureMention');
+    if (!select) return;
+    select.innerHTML = '<option value="">بدون إشارة</option>' +
+        groupChatLectureOptions.map((option, index) =>
+            `<option value="${index}">📚 ${escapeHtml(option.title)} · ${escapeHtml(option.path.replace('root/', ''))}</option>`
+        ).join('');
+}
+
+function syncChatSelectedFiles() {
+    const input = document.getElementById('groupChatFiles');
+    const output = document.getElementById('chatSelectedFiles');
+    if (!input || !output) return;
+    const files = Array.from(input.files || []);
+    output.textContent = files.length
+        ? `📎 ${files.length} ملف محدد: ${files.map(file => file.name).join('، ')}`
+        : '';
+}
+
+function bindGroupChatComposer() {
+    if (groupChatComposerBound) return;
+    groupChatComposerBound = true;
+    document.getElementById('groupChatFiles')?.addEventListener('change', syncChatSelectedFiles);
+    document.getElementById('groupChatInput')?.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendGroupChatMessage();
+        }
+    });
+}
+
+async function openGroupChatPanel() {
+    const panel = document.getElementById('groupChatPanel');
+    const overlay = document.getElementById('groupChatOverlay');
+    if (!panel || !overlay) return;
+    if (isNotificationsPanelOpen) toggleNotificationsPanel();
+    panel.classList.add('open');
+    overlay.classList.add('open');
+    groupChatMessages = readGroupChatLocal();
+    renderGroupChatMessages();
+    bindGroupChatComposer();
+    await prepareGroupChatLectureOptions();
+    listenToGroupChat();
+    await syncPendingGroupChatMessages();
+    const status = document.getElementById('groupChatStatus');
+    if (status && !isOnline) status.textContent = 'أوفلاين · عرض الرسائل المحفوظة محلياً';
+}
+
+function closeGroupChatPanel() {
+    document.getElementById('groupChatPanel')?.classList.remove('open');
+    document.getElementById('groupChatOverlay')?.classList.remove('open');
+}
+
+function toggleGroupChatPanel() {
+    const panel = document.getElementById('groupChatPanel');
+    if (panel?.classList.contains('open')) {
+        closeGroupChatPanel();
+    } else {
+        void openGroupChatPanel();
+    }
+}
+
+async function sendGroupChatMessage() {
+    const input = document.getElementById('groupChatInput');
+    const fileInput = document.getElementById('groupChatFiles');
+    const mentionSelect = document.getElementById('chatLectureMention');
+    const user = getStudyUser();
+    const text = input?.value.trim() || '';
+    const selectedFiles = Array.from(fileInput?.files || []);
+    if (!user) {
+        alert('⚠️ يجب تسجيل الدخول للمشاركة في الدردشة الجماعية.');
+        return;
+    }
+    if (!text && !selectedFiles.length && !mentionSelect?.value) {
+        input?.focus();
+        return;
+    }
+    if (selectedFiles.length && (!isOnline || !studyDb)) {
+        alert('⚠️ رفع وسائط الدردشة يحتاج اتصالاً بالإنترنت.');
+        return;
+    }
+
+    const localId = `local_chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    let uploaded = [];
+    if (selectedFiles.length) {
+        uploaded = await uploadStudyFiles(fileInput, 'وسائط الدردشة الجماعية');
+    }
+    const selectedMention = mentionSelect?.value ? groupChatLectureOptions[Number(mentionSelect.value)] : null;
+    const message = {
+        id: localId,
+        senderId: String(user.id || user.phone || user.username || 'user'),
+        senderName: studyUserLabel(user),
+        text,
+        timestamp: Date.now(),
+        pending: !(isOnline && studyDb),
+        lectureRef: selectedMention ? { ...selectedMention } : null,
+        files: uploaded.map((file, index) => ({
+            ...file,
+            mediaKey: `group-chat_${localId}_${index}`
+        }))
+    };
+
+    if (!isOnline || !studyDb) {
+        groupChatMessages = mergeGroupChatMessages(readGroupChatLocal(), [message]);
+        saveGroupChatLocal(groupChatMessages);
+        renderGroupChatMessages();
+        if (input) input.value = '';
+        if (mentionSelect) mentionSelect.value = '';
+        if (fileInput) fileInput.value = '';
+        syncChatSelectedFiles();
+        return;
+    }
+
+    try {
+        const ref = studyDb.ref('study_group_chat/messages').push();
+        const published = {
+            ...cleanGroupChatMessage(message),
+            id: ref.key,
+            pending: false,
+            files: message.files.map((file, index) => ({
+                ...file,
+                mediaKey: `group-chat_${ref.key}_${index}`
+            }))
+        };
+        await ref.set(published);
+        uploaded.forEach((file, index) => {
+            file.mediaKey = `group-chat_${ref.key}_${index}`;
+        });
+        await saveUploadedFilesLocally(uploaded, 'group-chat', ref.key, 'chat', 0);
+        groupChatMessages = mergeGroupChatMessages(readGroupChatLocal(), [published]);
+        saveGroupChatLocal(groupChatMessages);
+        renderGroupChatMessages();
+        if (input) input.value = '';
+        if (mentionSelect) mentionSelect.value = '';
+        if (fileInput) fileInput.value = '';
+        syncChatSelectedFiles();
+    } catch (error) {
+        console.error('تعذر نشر رسالة الدردشة:', error);
+        alert(`❌ تعذر نشر الرسالة: ${error.message}`);
+    }
+}
+
+function openGroupChatMedia(messageId, fileIndex) {
+    const message = groupChatMessages.find(item => String(item.id) === String(messageId));
+    const file = studyArray(message?.files)[fileIndex];
+    if (!file) return;
+    file.mediaKey = file.mediaKey || `group-chat_${messageId}_${fileIndex}`;
+    openStudyFileObjectPreview(file);
+}
+
+function goToChatLecture(messageId) {
+    const message = groupChatMessages.find(item => String(item.id) === String(messageId));
+    const lecture = message?.lectureRef;
+    if (!lecture?.path) return;
+    closeGroupChatPanel();
+    navigateTo(lecture.path);
+    setTimeout(() => {
+        const card = document.getElementById(`lectureCard-${Number(lecture.lectureNumber)}`);
+        if (card) {
+            if (!card.classList.contains('is-open')) toggleLectureCard(null, lecture.lectureNumber);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.boxShadow = '0 0 35px rgba(56,189,248,.45)';
+            setTimeout(() => { card.style.boxShadow = ''; }, 2500);
+        }
+    }, 600);
 }
 
 async function initStudyApp() {
