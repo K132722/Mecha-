@@ -1,24 +1,23 @@
-const CACHE_NAME = 'mecha-pwa-v30';
+const CACHE_NAME = 'mecha-pwa-v27'; // تحسين كاش الأوفلاين ودعم الملفات ذات query string
 const STATIC_ASSETS = [
     './',
     './index.html',
     './study-materials.html',
     './styles.css',
     './app.js',
-    './firebase-messaging-sw.js',
     './study-materials.js',
-    './document.png',
+    './firebase-messaging-sw.js',
     './manifest.json',
+    './document.png',
     './logo.png'
 ];
 
-// ========================================================================
-// 1. التثبيت - تخزين الملفات الأساسية
-// ========================================================================
+// 1. تثبيت وتخزين الملفات الأساسية محلياً
 self.addEventListener('install', (e) => {
     self.skipWaiting();
     e.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
+            // تخزين كل ملف على حدة بدلاً من addAll
             for (const asset of STATIC_ASSETS) {
                 try {
                     await cache.add(asset);
@@ -27,13 +26,18 @@ self.addEventListener('install', (e) => {
                     console.error(`❌ فشل تخزين: ${asset}`, err);
                 }
             }
+            // تأكيد تخزين study-materials.js
+            try {
+                await cache.add('./study-materials.js');
+                console.log('✅ تم تأكيد تخزين study-materials.js');
+            } catch (err) {
+                console.error('❌ فشل تخزين study-materials.js:', err);
+            }
         })
     );
 });
 
-// ========================================================================
-// 2. التفعيل - تنظيف الإصدارات القديمة
-// ========================================================================
+// 2. تنظيف الإصدارات القديمة من الكاش
 self.addEventListener('activate', (e) => {
     e.waitUntil(
         caches.keys().then((keys) => {
@@ -46,17 +50,15 @@ self.addEventListener('activate', (e) => {
     );
 });
 
-// ========================================================================
-// 3. استراتيجية الـ Fetch الذكية
-// ========================================================================
+// 3. إدارة استرجاع الملفات (Fetch Strategy)
 self.addEventListener('fetch', (e) => {
     const url = e.request.url;
 
-    // استثناءات - لا نتدخل في هذه الطلبات
+    // أ) الاستثناءات
     if (
-        e.request.method !== 'GET' ||
-        url.includes('firebaseio.com') ||
-        url.includes('googleapis.com') ||
+        e.request.method !== 'GET' || 
+        url.includes('firebaseio.com') || 
+        url.includes('googleapis.com') || 
         url.includes('replit') ||
         url.includes('onrender.com') ||
         url.includes('telegram.org') ||
@@ -64,58 +66,41 @@ self.addEventListener('fetch', (e) => {
         url.includes('/download/') ||
         url.includes('/view/')
     ) {
-        return;
+        return; 
     }
 
-    // طلبات التنقل (الصفحات)
+    // ب) طلبات الانتقال بين الصفحات (HTML Navigation)
     if (e.request.mode === 'navigate') {
         e.respondWith(
             fetch(e.request).catch(() => {
                 return caches.match(e.request).then((cachedPage) => {
-                    return cachedPage || caches.match('./study-materials.html') || caches.match('./index.html');
+                    return cachedPage ||
+                        caches.match(e.request, { ignoreSearch: true }) ||
+                        caches.match('./study-materials.html', { ignoreSearch: true }) ||
+                        caches.match('./index.html', { ignoreSearch: true });
                 });
             })
         );
         return;
     }
 
-    // الأصول الثابتة - استراتيجية Stale-While-Revalidate
+    // ج) الأصول الثابتة - Cache First مع fallback للـ network
     e.respondWith(
-        caches.match(e.request).then((cachedResponse) => {
-            const fetchPromise = fetch(e.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
-                    const clonedResponse = networkResponse.clone();
+        caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+            // إذا لم يكن في الكاش، حاول التحميل من الشبكة واحفظه للاستخدام القادم
+            return fetch(e.request).then((response) => {
+                // خزن النسخة الجديدة في الكاش
+                if (response && response.status === 200) {
+                    const clonedResponse = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(e.request, clonedResponse);
                     });
                 }
-                return networkResponse;
-            }).catch(() => {
-                // إذا فشلت الشبكة، نرجع الـ cached response إذا كان موجوداً
-                return cachedResponse;
+                return response;
             });
-
-            // إذا كان لدينا نسخة مخزنة، نرجعها فوراً ونحدث في الخلفية
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            // إذا لم تكن هناك نسخة مخزنة، ننتظر الشبكة
-            return fetchPromise;
         })
     );
-});
-
-// ========================================================================
-// 4. استقبال رسائل من الصفحة (Keep-Alive)
-// ========================================================================
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'KEEP_ALIVE_PING') {
-        if (event.source) {
-            event.source.postMessage({
-                type: 'KEEP_ALIVE_PONG',
-                timestamp: Date.now()
-            });
-        }
-    }
 });
