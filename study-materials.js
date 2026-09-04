@@ -36,6 +36,16 @@ let idbInstance = null;
 // ========================================================================
 const TELEGRAM_SERVER_URL = "https://drive-shared-backend2.onrender.com";
 const VAPID_KEY = 'BLiXP9SU05ttQ0-BLyJXQZ3DHwTwgc3t0U4Ld7yE4ZA2USu3LWdJWDXCRKYQwJPaz6yvOZKSrwYO6pSJKvK4mFs';
+const ACCOUNT_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBL_cR0OwbQ3KPYemGY0Q8aliIlXmQkBrU",
+    authDomain: "khaled-12ab5.firebaseapp.com",
+    databaseURL: "https://khaled-12ab5-default-rtdb.firebaseio.com",
+    projectId: "khaled-12ab5",
+    storageBucket: "khaled-12ab5.firebasestorage.app",
+    messagingSenderId: "75339042920",
+    appId: "1:75339042920:web:2f58ca848a8328afc06bdd"
+};
+let accountDb = null;
 
 // ========================================================================
 // 3. نظام التخزين المحلي الذكي (IndexedDB + localStorage)
@@ -492,9 +502,100 @@ function isStudyAdmin() {
     return user && (user.role === 'admin' || user.phone === '774132722');
 }
 
+function getCachedStudyAccountStatus() {
+    const user = getStudyUser();
+    if (!user?.phone) return null;
+    try {
+        const raw = localStorage.getItem(`account_status_${user.phone}`);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function studyAccountIsBlocked(status) {
+    if (!status) return false;
+    if (status.status === 'banned' || status.banned === true) return true;
+    return status.status === 'suspended' && (!status.suspendedUntil || Number(status.suspendedUntil) > Date.now());
+}
+
+function studyAccountRestrictionMessage(status) {
+    if (status?.status === 'banned' || status?.banned) {
+        return `⛔ تم توقيف حسابك نهائياً.<br><small>${escapeHtml(status.reason || 'مخالفة سياسة الاستخدام')}</small>`;
+    }
+    const until = status?.suspendedUntil
+        ? new Date(Number(status.suspendedUntil)).toLocaleString('ar-YE')
+        : 'حتى إشعار آخر';
+    return `🔴 تم تجميد حسابك مؤقتاً حتى ${escapeHtml(until)}.<br><small>${escapeHtml(status?.reason || 'مخالفة سياسة الاستخدام')}</small>`;
+}
+
+function renderStudyAccountRestriction(status) {
+    const grid = document.getElementById('foldersGrid');
+    if (!grid) return;
+    grid.innerHTML = `
+        <div class="empty-state-advanced account-restriction-state">
+            <span class="empty-icon">⛔</span>
+            <h3>الوصول إلى المواد الدراسية موقوف</h3>
+            <p>${studyAccountRestrictionMessage(status)}</p>
+            <button class="btn-action btn-secondary" onclick="goHome()">🏠 العودة إلى الصفحة الرئيسية</button>
+        </div>
+    `;
+}
+
+function initAccountFirebase() {
+    if (typeof firebase === 'undefined' || !firebase.database) return false;
+    try {
+        const existing = firebase.apps?.find(app => app.name === 'account');
+        const accountApp = existing || firebase.initializeApp(ACCOUNT_FIREBASE_CONFIG, 'account');
+        accountDb = accountApp.database();
+        return true;
+    } catch (error) {
+        console.warn('تعذر تهيئة قاعدة حسابات المستخدمين:', error);
+        accountDb = null;
+        return false;
+    }
+}
+
+async function loadStudyAccountStatus() {
+    const user = getStudyUser();
+    const cached = getCachedStudyAccountStatus();
+    if (!user?.phone || !accountDb || !isOnline) {
+        return cached || { status: 'active', canUserAddContent: true };
+    }
+    try {
+        const [statusSnapshot, bannedSnapshot] = await Promise.all([
+            accountDb.ref(`users/${user.phone}/accountStatus`).once('value'),
+            accountDb.ref(`banned_users/${user.phone}`).once('value')
+        ]);
+        const statusValue = statusSnapshot.val() || {};
+        const bannedValue = bannedSnapshot.val();
+        const status = bannedValue
+            ? { ...statusValue, ...(bannedValue || {}), status: 'banned', banned: true }
+            : {
+                status: statusValue.status || 'active',
+                canUserAddContent: statusValue.canUserAddContent !== false,
+                warningCount: Number(statusValue.warningCount || 0),
+                contentRestrictedUntil: Number(statusValue.contentRestrictedUntil || 0),
+                suspendedUntil: Number(statusValue.suspendedUntil || 0),
+                reason: statusValue.reason || ''
+            };
+        localStorage.setItem(`account_status_${user.phone}`, JSON.stringify(status));
+        return status;
+    } catch (error) {
+        return cached || { status: 'active', canUserAddContent: true };
+    }
+}
+
 function canUserAddContent() {
     const user = getStudyUser();
-    return !!user;
+    if (!user) return false;
+    const status = getCachedStudyAccountStatus();
+    if (studyAccountIsBlocked(status)) return false;
+    if (status?.canUserAddContent === false &&
+        (!status.contentRestrictedUntil || Number(status.contentRestrictedUntil) > Date.now())) {
+        return false;
+    }
+    return true;
 }
 
 // ========================================================================
@@ -3012,6 +3113,30 @@ function closeModal(modalId) {
     }
 }
 
+function studyInstructionsSeenKey() {
+    const user = getStudyUser();
+    return `study_instructions_seen_v1_${String(user?.phone || 'guest')}`;
+}
+
+function openStudyInstructionsModal(markAsSeen = true) {
+    if (markAsSeen) {
+        try {
+            localStorage.setItem(studyInstructionsSeenKey(), String(Date.now()));
+        } catch (error) {}
+    }
+    const modal = document.getElementById('studyInstructionsModal');
+    if (modal) modal.classList.add('active');
+}
+
+function showStudyInstructionsOnFirstVisit() {
+    if (!getStudyUser()?.phone) return;
+    try {
+        if (!localStorage.getItem(studyInstructionsSeenKey())) {
+            setTimeout(() => openStudyInstructionsModal(true), 550);
+        }
+    } catch (error) {}
+}
+
 function closeFilePreview() {
     const overlay = document.getElementById('filePreviewOverlay');
     if (overlay) {
@@ -3954,6 +4079,7 @@ async function initStudyApp() {
     console.log('🚀 بدء تهيئة منظومة المواد الدراسية مع الأوفلاين...');
     const previewReturn = consumeStudyPreviewReturn();
     initFirebase();
+    initAccountFirebase();
     try {
         localStorage.removeItem('study_current_path');
         localStorage.removeItem('study_browse_state');
@@ -3963,6 +4089,12 @@ async function initStudyApp() {
     globalPostsData = { folders: [], posts: [] };
     const userDisplay = document.getElementById('userDisplay');
     if (userDisplay) userDisplay.textContent = `👤 ${studyUserLabel(getStudyUser())}`;
+    const accountStatus = await loadStudyAccountStatus();
+    if (studyAccountIsBlocked(accountStatus)) {
+        renderStudyAccountRestriction(accountStatus);
+        updateStatusBar(isOnline ? '🌐 الحساب موقوف' : '📡 الحساب موقوف · أوفلاين');
+        return;
+    }
     updateBreadcrumb();
     updateButtons();
     loadNotificationsFromStorage();
@@ -3974,6 +4106,7 @@ async function initStudyApp() {
     initConnectionMonitoring();
     if (isOnline && studyDb) startNotificationListener();
     if (isOnline && studyDb) listenToGroupChat();
+    showStudyInstructionsOnFirstVisit();
     setTimeout(async () => {
         if (await requestNotificationPermission()) await initFCM();
     }, 2000);
@@ -5205,7 +5338,7 @@ function cleanGroupChatMessage(message) {
         text: message.text || '',
         timestamp: Number(message.timestamp || Date.now()),
         pending: Boolean(message.pending),
-        contentRef: message.contentRef || message.lectureRef || null,
+        contentRef: cleanGroupChatContentRef(message.contentRef || message.lectureRef),
         files: studyArray(message.files).map(file => {
             const clean = { ...file };
             delete clean.fileBlob;
@@ -5215,6 +5348,21 @@ function cleanGroupChatMessage(message) {
     };
 }
 
+function cleanGroupChatContentRef(reference) {
+    if (!reference || typeof reference !== 'object') return null;
+    const allowedKeys = [
+        'type', 'title', 'path', 'pathDisplay', 'postIndex',
+        'lectureNumber', 'itemId', 'folderName'
+    ];
+    const cleaned = {};
+    allowedKeys.forEach(key => {
+        const value = reference[key];
+        if (value !== undefined && value !== null && value !== '') {
+            cleaned[key] = value;
+        }
+    });
+    return cleaned.path && cleaned.type ? cleaned : null;
+}
 function groupChatLastReadStorageKey() {
     return 'study_group_chat_last_read_at';
 }
@@ -5538,7 +5686,7 @@ async function sendGroupChatMessage() {
         text,
         timestamp: Date.now(),
         pending: !(isOnline && studyDb),
-        contentRef: selectedGroupChatMention ? { ...selectedGroupChatMention } : null,
+        contentRef: cleanGroupChatContentRef(selectedGroupChatMention),
         files: uploaded.map((file, index) => ({
             ...file,
             mediaKey: `group-chat_${localId}_${index}`
