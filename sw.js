@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mecha-pwa-v28'; // تحسين كاش الأوفلاين ودعم الجلسة من الصفحة الرئيسية
+const CACHE_NAME = 'mecha-pwa-v33'; // تحسين كاش الأوفلاين ودعم الجلسة من الصفحة الرئيسية
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -9,6 +9,8 @@ const STATIC_ASSETS = [
     './firebase-messaging-sw.js',
     './manifest.json',
     './document.png',
+    './IMG_512.png',
+    './IMG_192.png',
     './logo.png'
 ];
 
