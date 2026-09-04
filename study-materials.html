@@ -441,6 +441,7 @@
             font: 600 14px 'Tajawal', sans-serif;
             cursor: pointer;
             transition: var(--transition-smooth);
+            position: relative;
         }
 
         .btn-group-chat:hover {
@@ -448,6 +449,36 @@
             border-color: var(--info);
             transform: translateY(-2px);
             box-shadow: 0 4px 20px rgba(56, 189, 248, .15);
+        }
+
+        .btn-group-chat .chat-badge-inline,
+        .lecture-comments-btn .comments-badge-inline {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 20px;
+            color: #fff;
+            background: var(--danger);
+            border: 2px solid var(--primary-surface);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, .28);
+            font-size: 9px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .btn-group-chat .chat-badge-inline {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            border-radius: 50%;
+        }
+
+        .btn-group-chat .chat-badge-inline.visible,
+        .lecture-comments-btn .comments-badge-inline.visible {
+            display: inline-flex;
         }
 
         /* ============================================================
@@ -2264,7 +2295,7 @@
 
         .chat-mention-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 8px;
             margin-bottom: 8px;
         }
@@ -2273,6 +2304,142 @@
             color: var(--text-secondary);
             font-size: 11px;
             white-space: nowrap;
+        }
+
+        .chat-mention-search {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-mention-search input {
+            width: 100%;
+            min-width: 0;
+            padding: 7px 9px;
+            color: var(--text-primary);
+            background: rgba(0,0,0,.25);
+            border: 1px solid var(--glass-border);
+            border-radius: 9px;
+            outline: none;
+            font: 11px 'Tajawal', sans-serif;
+        }
+
+        .chat-mention-search input:focus {
+            border-color: var(--info);
+            box-shadow: 0 0 0 3px rgba(56,189,248,.08);
+        }
+
+        .chat-mention-results {
+            display: none;
+            position: absolute;
+            z-index: 5;
+            top: calc(100% + 5px);
+            left: 0;
+            right: 0;
+            max-height: 230px;
+            overflow-y: auto;
+            padding: 6px;
+            background: #162536;
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(0,0,0,.35);
+        }
+
+        .chat-mention-results.active {
+            display: block;
+        }
+
+        .chat-mention-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px;
+            color: var(--text-primary);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            text-align: right;
+            cursor: pointer;
+            font: 11px 'Tajawal', sans-serif;
+        }
+
+        .chat-mention-result:hover {
+            background: rgba(56,189,248,.1);
+            border-color: rgba(56,189,248,.2);
+        }
+
+        .chat-mention-result .mention-result-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .chat-mention-result .mention-result-title {
+            overflow: hidden;
+            color: #f1f5f9;
+            font-weight: 800;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-mention-result .mention-result-path {
+            overflow: hidden;
+            margin-top: 2px;
+            color: var(--text-muted);
+            font-size: 9px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-mention-result .mention-result-type {
+            flex: 0 0 auto;
+            padding: 2px 6px;
+            color: var(--gold-secondary);
+            background: rgba(212,175,55,.1);
+            border-radius: 12px;
+            font-size: 9px;
+        }
+
+        .chat-mention-selected {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 5px;
+            padding: 6px 8px;
+            color: var(--gold-secondary);
+            background: rgba(212,175,55,.1);
+            border: 1px solid rgba(212,175,55,.22);
+            border-radius: 8px;
+            font-size: 10px;
+        }
+
+        .chat-mention-selected.visible {
+            display: flex;
+        }
+
+        .chat-mention-selected span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-mention-selected button {
+            flex: 0 0 auto;
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,.08);
+            border: 0;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .chat-mention-empty {
+            padding: 12px 8px;
+            color: var(--text-muted);
+            text-align: center;
+            font-size: 10px;
         }
 
         .chat-mention-row select {
@@ -2466,6 +2633,8 @@
             .comments-modal-box { max-height: 92vh; padding: 20px 14px; }
             .comment-composer-footer { align-items: flex-end; }
             .comment-hint { max-width: 48%; }
+            .chat-mention-row { gap: 6px; }
+            .chat-mention-row label { font-size: 10px; }
         }
     </style>
 </head>
@@ -2524,6 +2693,7 @@
             </button>
             <button class="btn-group-chat" id="groupChatTrigger" onclick="toggleGroupChatPanel()" aria-label="الدردشة الجماعية">
                 💬
+                <span class="chat-badge-inline" id="groupChatBadge">0</span>
             </button>
         </div>
         
@@ -2594,10 +2764,18 @@
     </div>
     <div class="group-chat-composer">
         <div class="chat-mention-row">
-            <label for="chatLectureMention">📚 الإشارة إلى محاضرة</label>
-            <select id="chatLectureMention">
-                <option value="">بدون إشارة</option>
-            </select>
+            <label for="groupChatMentionSearch">🔗 الإشارة</label>
+            <div class="chat-mention-search">
+                <input id="groupChatMentionSearch" type="search" autocomplete="off"
+                    placeholder="ابحث عن منشور أو محاضرة أو تكليف..."
+                    aria-label="البحث عن منشور أو محاضرة أو تكليف"
+                    oninput="handleGroupChatMentionSearch(this.value)">
+                <div class="chat-mention-results" id="groupChatMentionResults"></div>
+                <div class="chat-mention-selected" id="groupChatMentionSelected">
+                    <span id="groupChatMentionSelectedText"></span>
+                    <button type="button" onclick="clearGroupChatMention()" aria-label="إلغاء الإشارة">✕</button>
+                </div>
+            </div>
         </div>
         <div class="chat-input-row">
             <label class="chat-attach-btn" for="groupChatFiles" title="إدراج وسائط">📎</label>
