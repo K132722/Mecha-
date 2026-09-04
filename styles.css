@@ -4,31 +4,31 @@
 :root {
     --bg-main: #060d18;
     --bg-gradient: radial-gradient(circle at 30% 10%, #0f1e33, #040a12 80%);
-    
+
     /* التأثيرات الزجاجية - أكثر شفافية وأناقة */
     --glass-bg: rgba(12, 25, 45, 0.45);
     --glass-bg-hover: rgba(22, 42, 72, 0.65);
     --glass-border: rgba(212, 175, 55, 0.25);
     --glass-border-glow: rgba(212, 175, 55, 0.6);
-    
+
     /* التدرج الذهبي الفاخر - أعمق وأكثر دفئاً */
     --gold-primary: #d4af37;
     --gold-secondary: #f0d080;
     --gold-grad: linear-gradient(135deg, #b8860b 0%, #d4af37 40%, #f5d78e 70%, #d4af37 100%);
     --gold-glow: 0 0 25px rgba(212, 175, 55, 0.35);
     --gold-glow-soft: 0 0 50px rgba(212, 175, 55, 0.12);
-    
+
     /* النصوص والحالات - محسّنة للوضوح */
     --text-light: #f2f6fc;
     --text-muted: #b8c4d0;
     --text-dim: #7a8a9a;
     --text-gold: #e8c86a;
-    
+
     --danger-color: #ff6b7a;
     --danger-bg: rgba(255, 107, 122, 0.12);
     --success-color: #4ade80;
     --success-bg: rgba(74, 222, 128, 0.12);
-    
+
     /* الظلال والإضاءة */
     --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.6);
     --shadow-glow: 0 8px 32px rgba(212, 175, 55, 0.2);
@@ -361,6 +361,120 @@ body {
     color: var(--text-dim);
 }
 
+.policy-modal-box {
+    max-width: 680px;
+    max-height: 88vh;
+    overflow: hidden;
+    gap: 12px;
+}
+
+.policy-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    padding-bottom: 12px;
+}
+
+.policy-modal-header h3 {
+    margin: 4px 0 0;
+    border: 0;
+    padding: 0;
+}
+
+.policy-kicker {
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.policy-close-btn {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.policy-close-btn:hover {
+    color: #fff;
+    border-color: var(--gold-primary);
+}
+
+.policy-content {
+    overflow-y: auto;
+    max-height: 62vh;
+    padding: 2px 4px 4px 2px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.9;
+}
+
+.policy-content section + section {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 14px;
+    padding-top: 14px;
+}
+
+.policy-content h4 {
+    color: var(--gold-secondary);
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.policy-content p {
+    margin: 0 0 8px;
+}
+
+.policy-content ol {
+    margin: 6px 0 0;
+    padding-right: 22px;
+}
+
+.policy-content li {
+    margin-bottom: 7px;
+}
+
+.policy-content code {
+    color: var(--info-color, #4fc3f7);
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.policy-steps {
+    display: grid;
+    gap: 7px;
+    margin: 10px 0;
+}
+
+.policy-steps div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+}
+
+.policy-steps span {
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.policy-admin-note {
+    background: rgba(212, 175, 55, 0.04);
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.policy-modal-actions {
+    justify-content: flex-start;
+}
+
 /* ==========================================================================
    4. الأزرار المصممة (Custom Glass Buttons) - فاخرة
    ========================================================================== */
@@ -617,6 +731,13 @@ input:focus, textarea:focus {
     }
     .modal-box {
         padding: 20px 16px;
+    }
+    .policy-modal-box {
+        max-height: 92vh;
+    }
+    .policy-content {
+        max-height: 70vh;
+        font-size: 12px;
     }
     .login-card {
         padding: 25px 20px;
