@@ -451,6 +451,29 @@
             box-shadow: 0 4px 20px rgba(56, 189, 248, .15);
         }
 
+        .btn-study-instructions {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            padding: 8px 11px;
+            background: rgba(139, 92, 246, .1);
+            border: 1px solid rgba(139, 92, 246, .24);
+            border-radius: var(--radius-sm);
+            color: #c4b5fd;
+            font: 600 13px 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            position: relative;
+        }
+
+        .btn-study-instructions:hover {
+            background: rgba(139, 92, 246, .2);
+            border-color: #a78bfa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(139, 92, 246, .16);
+        }
+
         .btn-group-chat .chat-badge-inline,
         .lecture-comments-btn .comments-badge-inline {
             display: none;
@@ -2517,6 +2540,65 @@
             max-height: min(86vh, 720px);
         }
 
+        .study-instructions-modal {
+            width: min(100%, 680px);
+            max-height: min(88vh, 760px);
+        }
+
+        .study-instructions-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 10px;
+        }
+
+        .study-instructions-header .modal-title {
+            margin: 0;
+        }
+
+        .study-instructions-content {
+            overflow-y: auto;
+            max-height: 62vh;
+            padding: 2px 4px 4px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.85;
+        }
+
+        .study-instructions-content section + section {
+            border-top: 1px solid rgba(255,255,255,.06);
+            margin-top: 13px;
+            padding-top: 13px;
+        }
+
+        .study-instructions-content h4 {
+            color: var(--gold-secondary);
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .study-instructions-content ul {
+            margin: 0;
+            padding-right: 21px;
+        }
+
+        .study-instructions-content li {
+            margin-bottom: 5px;
+        }
+
+        .study-instructions-warning {
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(212,175,55,.05);
+            border: 1px solid rgba(212,175,55,.12);
+        }
+
+        .study-instructions-warning p {
+            color: var(--text-primary);
+        }
+
         .comments-modal-header {
             display: flex;
             align-items: flex-start;
@@ -2630,7 +2712,9 @@
             .group-chat-panel { width: 100%; }
             .lecture-heading { gap: 8px; }
             .lecture-header-actions { width: 100%; justify-content: flex-start; }
-            .comments-modal-box { max-height: 92vh; padding: 20px 14px; }
+            .comments-modal-box,
+            .study-instructions-modal { max-height: 92vh; padding: 20px 14px; }
+            .study-instructions-content { max-height: 70vh; font-size: 12px; }
             .comment-composer-footer { align-items: flex-end; }
             .comment-hint { max-width: 48%; }
             .chat-mention-row { gap: 6px; }
@@ -2694,6 +2778,9 @@
             <button class="btn-group-chat" id="groupChatTrigger" onclick="toggleGroupChatPanel()" aria-label="الدردشة الجماعية">
                 💬
                 <span class="chat-badge-inline" id="groupChatBadge">0</span>
+            </button>
+            <button class="btn-study-instructions" id="studyInstructionsTrigger" onclick="openStudyInstructionsModal(false)" aria-label="تعليمات صفحة المواد الدراسية">
+                ℹ️
             </button>
         </div>
         
@@ -2786,6 +2873,73 @@
         <div class="chat-selected-files" id="chatSelectedFiles"></div>
     </div>
 </aside>
+
+<!-- ============================================================
+     📘 تعليمات صفحة المواد الدراسية
+     ============================================================ -->
+<div class="modal-overlay-advanced" id="studyInstructionsModal">
+    <div class="modal-box-advanced study-instructions-modal">
+        <div class="study-instructions-header">
+            <div>
+                <div class="modal-title">📘 تعليمات استخدام صفحة المواد الدراسية</div>
+                <div class="comments-subtitle">دليل مختصر للاستفادة من جميع وظائف الصفحة</div>
+            </div>
+            <button class="comments-close-btn" onclick="closeModal('studyInstructionsModal')" aria-label="إغلاق التعليمات">✕</button>
+        </div>
+        <div class="study-instructions-content">
+            <section>
+                <h4>🧭 التنقل والمجلدات</h4>
+                <ul>
+                    <li>استخدم «الرئيسية» للعودة إلى الصفحة الرئيسية، و«رجوع» للعودة إلى المجلد السابق.</li>
+                    <li>اضغط على أي مجلد لفتحه، ويمكن استخدام مسار التنقل أعلى الصفحة للرجوع إلى مستوى محدد.</li>
+                    <li>مجلد المادة الدراسية ينشئ 15 محاضرة مرتبة تلقائياً. أما المجلد العادي فيستخدم للملفات والمنشورات العامة.</li>
+                    <li>زر «تحديث» يجلب آخر البيانات من Firebase عند توفر الاتصال ويحفظ نسخة محلية للاستخدام لاحقاً.</li>
+                </ul>
+            </section>
+            <section>
+                <h4>📚 المحاضرات والملفات</h4>
+                <ul>
+                    <li>اضغط على بطاقة المحاضرة لفتح تفاصيلها أو إغلاقها.</li>
+                    <li>يمكن معاينة ملفات المحاضرات والتكاليف، تنزيلها، أو حفظها محلياً لتعمل بدون إنترنت.</li>
+                    <li>التكاليف تعرض مدتها والعد التنازلي وحالة الإنجاز. استخدم زر الإنجاز لإرفاق ملف الحل أو تسجيل الإنجاز بدون ملف.</li>
+                    <li>تظهر تعليقات كل محاضرة بجانب زر «التعليقات»، ويمكن إضافة تعليق باسم المستخدم ووقت النشر.</li>
+                </ul>
+            </section>
+            <section>
+                <h4>🔍 البحث والإشارات</h4>
+                <ul>
+                    <li>استخدم البحث العام للعثور على المجلدات والمنشورات والمحاضرات والملفات والتكاليف والإنجازات.</li>
+                    <li>داخل الدردشة الجماعية اكتب كلمتين أو أكثر للبحث عن منشور أو محاضرة أو تكليف، ثم اختر النتيجة لإرفاقها بالرسالة.</li>
+                    <li>يمكن فتح المحتوى المشار إليه من بطاقة الرسالة مباشرة.</li>
+                </ul>
+            </section>
+            <section>
+                <h4>💬 الدردشة والإشعارات</h4>
+                <ul>
+                    <li>زر 💬 يفتح الدردشة الجماعية لجميع مستخدمي المواد الدراسية، وتظهر شارة للرسائل الجديدة غير المقروءة.</li>
+                    <li>يمكن إرسال الرسائل النصية والإشارات بدون اتصال، بينما رفع الوسائط يحتاج اتصالاً بالإنترنت.</li>
+                    <li>زر 🔔 يعرض الإشعارات الرسمية والتنبيهات المتعلقة بالمحتوى والحساب.</li>
+                </ul>
+            </section>
+            <section>
+                <h4>📡 العمل بدون إنترنت</h4>
+                <ul>
+                    <li>بعد فتح الصفحة مرة واحدة أثناء الاتصال، يبدأ التطبيق من الكاش المحلي عند فتحه لاحقاً بدون إنترنت.</li>
+                    <li>يمكن قراءة المجلدات والملفات المحفوظة محلياً، وتُحفظ الرسائل والتعليقات المعلّقة حتى عودة الاتصال.</li>
+                    <li>يشير شريط الحالة الأحمر إلى وضع الأوفلاين، ويعرض مؤشر التخزين حجم البيانات المحفوظة.</li>
+                    <li>لا تنظف الكاش إلا إذا أردت حذف الملفات والبيانات المحلية وإعادة تنزيلها من جديد.</li>
+                </ul>
+            </section>
+            <section class="study-instructions-warning">
+                <h4>⚠️ تذكير مهم</h4>
+                <p>يجب نشر الملفات والمنشورات داخل المجلدات والمحاضرات المناسبة وبما يتوافق مع سياسة الاستخدام. يحتفظ النظام بهوية ناشر المحتوى، وتظهر الإنذارات الرسمية في مركز الإشعارات.</p>
+            </section>
+        </div>
+        <div class="modal-actions-advanced">
+            <button class="btn-modal btn-confirm" onclick="closeModal('studyInstructionsModal')">فهمت</button>
+        </div>
+    </div>
+</div>
 
 <!-- ============================================================
      🪟 النوافذ المنبثقة
