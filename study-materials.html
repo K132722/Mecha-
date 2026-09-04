@@ -3206,46 +3206,7 @@
         });
     })();
 
-    function showUpdateNotification() {
-        const notifDiv = document.createElement('div');
-        notifDiv.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--gold-primary);
-            border-radius: 16px;
-            padding: 16px 24px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            z-index: 99999;
-            direction: rtl;
-            max-width: 90%;
-            text-align: center;
-            animation: slideUp 0.5s ease;
-        `;
-        notifDiv.innerHTML = `
-            <div style="color:var(--gold-primary);font-weight:700;font-size:14px;">🔄 تحديث متوفر</div>
-            <div style="color:var(--text-secondary);font-size:12px;margin-top:4px;">تم تحميل تحديث جديد للتطبيق</div>
-            <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;">
-                <button onclick="applyUpdate()" style="background:var(--gold-grad);color:#0a0f1e;border:none;border-radius:8px;padding:6px 20px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;">تحديث الآن</button>
-                <button onclick="this.parentElement.parentElement.remove()" style="background:rgba(255,255,255,0.04);color:var(--text-secondary);border:1px solid var(--glass-border);border-radius:8px;padding:6px 20px;cursor:pointer;font-family:'Tajawal',sans-serif;">تخطي</button>
-            </div>
-        `;
-        document.body.appendChild(notifDiv);
-
-        if (!document.getElementById('updateStyles')) {
-            const style = document.createElement('style');
-            style.id = 'updateStyles';
-            style.textContent = `
-                @keyframes slideUp {
-                    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
-                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-                }
-            `;
-            document.head.appendChild(style);
-        }
+    
     }
 
     function applyUpdate() {
