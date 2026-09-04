@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mecha-pwa-v27'; // تحسين كاش الأوفلاين ودعم الملفات ذات query string
+const CACHE_NAME = 'mecha-pwa-v28'; // تحسين كاش الأوفلاين ودعم الجلسة من الصفحة الرئيسية
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -73,11 +73,15 @@ self.addEventListener('fetch', (e) => {
     if (e.request.mode === 'navigate') {
         e.respondWith(
             fetch(e.request).catch(() => {
-                return caches.match(e.request).then((cachedPage) => {
+                const pathname = new URL(e.request.url).pathname;
+                const preferredFallback = pathname.includes('study-materials')
+                    ? './study-materials.html'
+                    : './index.html';
+                return caches.match(e.request, { ignoreSearch: true }).then((cachedPage) => {
                     return cachedPage ||
-                        caches.match(e.request, { ignoreSearch: true }) ||
-                        caches.match('./study-materials.html', { ignoreSearch: true }) ||
-                        caches.match('./index.html', { ignoreSearch: true });
+                        caches.match(preferredFallback, { ignoreSearch: true }) ||
+                        caches.match('./index.html', { ignoreSearch: true }) ||
+                        caches.match('./study-materials.html', { ignoreSearch: true });
                 });
             })
         );
