@@ -16,7 +16,7 @@
     <div class="glass-card login-card">
         <img src="logo.png" alt="الشعار" class="login-logo" onerror="this.style.display='none'">
         <h2>تسجيل الدخول للمنظومة</h2>
-        
+
         <!-- الخطوة 1: إدخال رقم الهاتف -->
         <div id="stepPhone">
             <div class="input-group">
@@ -33,7 +33,7 @@
                 <p style="color:var(--gold-secondary); font-size:14px;">✅ تم التحقق من رقمك</p>
                 <p style="color:var(--text-muted); font-size:13px;" id="verifiedUserName">المهندس ...</p>
             </div>
-            
+
             <!-- حاوية الرمز المشفر مع زر النسخ -->
             <div class="code-container" style="background:rgba(255,255,255,0.03); border-radius:12px; padding:14px; margin:12px 0; border:1px solid rgba(212,175,55,0.15);">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -94,7 +94,7 @@
                 <span class="device-id-badge" id="deviceIdDisplay" style="font-size:10px; color:var(--text-dim); display:block; margin-top:2px;">📱 المعرف: ...</span>
             </div>
         </div>
-        
+
         <div class="header-actions">
             <span id="netStatusBadge" class="net-badge online">⚡ متصل</span>
             <button id="btnNotifCenter" class="icon-btn" title="الإشعارات">🔔</button>
@@ -129,6 +129,14 @@
             </div>
         </button>
 
+        <button class="glass-card menu-card" id="btnUsagePolicy">
+            <div class="menu-icon">⚖️</div>
+            <div class="menu-text">
+                <h3>القوانين والعقوبات</h3>
+                <p>سياسة الاستخدام ونظام الإنذارات</p>
+            </div>
+        </button>
+
         <button class="glass-card menu-card" id="btnUsersData">
             <div class="menu-icon">👥</div>
             <div class="menu-text">
@@ -138,6 +146,65 @@
         </button>
     </section>
 
+</div>
+
+<!-- نافذة سياسة الاستخدام والقوانين والعقوبات -->
+<div class="modal-overlay" id="usagePolicyModal">
+    <div class="glass-card modal-box large-modal policy-modal-box">
+        <div class="policy-modal-header">
+            <div>
+                <span class="policy-kicker">📚 المكتبة والأرشيف الدراسي</span>
+                <h3>سياسة الاستخدام والعقوبات ونظام الإنذارات</h3>
+            </div>
+            <button onclick="closeModal('usagePolicyModal')" class="policy-close-btn" aria-label="إغلاق">✕</button>
+        </div>
+
+        <div class="policy-content" dir="rtl">
+            <section>
+                <h4>أولاً: نص سياسة الاستخدام والالتزام</h4>
+                <p>أخي المهندس،</p>
+                <p>تم تصميم وتطوير هذا التطبيق ليكون منصة أكاديمية مجتمعية مخصصة ومحفوفة بالترتيب والإنتاجية، بهدف تسهيل مشاركة وتحميل المحاضرات والملفات الدراسية بين الطلاب بصورة منظمة.</p>
+                <p>لضمان استمرار الفائدة وعدم تشتيت زملائك، يرجى الالتزام التام بنشر الأبحاث والملفات والمواضيع في مجلداتها المخصصة وبما يتعلق حتماً بعناوين المحاضرات. يمنع منعاً باتاً إدراج أي محتوى خارج الإطار الأكاديمي أو رفع ملفات في غير مجلداتها المعنونة.</p>
+                <p>يرجى العلم بأن المنصة تخضع لنظام رقابة وإدارة صارمة. تُطبق على الحسابات المخالفة عقوبات تتدرج من الإنذارات الرسمية وتصل إلى الحظر النهائي والتوقيف من التطبيق. تعاونكم هو أساس نجاح المنصة.</p>
+            </section>
+
+            <section>
+                <h4>ثانياً: لائحة القوانين وسياسة الاستخدام الرسمية</h4>
+                <ol>
+                    <li><strong>حصرية المحتوى والتصنيف:</strong> يُحظر حظراً تاماً رفع أو إدراج أي ملف، أطروحة، مستند، أو منشور لا يتطابق موضوعه بوضوح مع عنوان المجلد الفرعي أو عنوان المحاضرة المحدد لها.</li>
+                    <li><strong>جودة ونزاهة المرفقات:</strong> يجب أن تكون الملفات المرفقة سليمة، وخالية من أي محتوى مسيء، تجاري، شخصي، أو غير مرتبط بالمنهج الدراسي المقرر.</li>
+                    <li><strong>الهوية الرقمية للتحميل:</strong> تُسجل جميع عمليات الرفع والنشر باسم الحساب والبيانات المرتبطة برقم الهاتف والمعرف الخاص بالمستخدم.</li>
+                    <li><strong>صلاحيات الإدارة:</strong> يحق لمدير النظام تعديل أو حذف أي منشور أو مجلد يخالف معايير النشر فوراً ودون إشعار مسبق.</li>
+                </ol>
+            </section>
+
+            <section>
+                <h4>ثالثاً: سلم العقوبات ونظام الإنذارات التدريجي</h4>
+                <p>يتم التعامل مع المخالفات، مثل إدراج ملفات عشوائية أو النشر خارج إطار المجلدات المخصصة، وفق النظام الآتي:</p>
+                <div class="policy-steps">
+                    <div>🟡 <strong>الإنذار الأول</strong><span>تنبيه داخل التطبيق + حذف المحتوى المخالف</span></div>
+                    <div>🟠 <strong>الإنذار الثاني</strong><span>تقييد صلاحية رفع الملفات لمدة 3 أيام</span></div>
+                    <div>🔴 <strong>الإنذار الثالث</strong><span>تجميد الحساب مؤقتاً لمدة 7 أيام</span></div>
+                    <div>⛔ <strong>التكرار الرابع</strong><span>توقيف الحساب نهائياً وحظر الرقم والجهاز</span></div>
+                </div>
+                <ol class="policy-numbered-actions">
+                    <li><strong>الإنذار الأول:</strong> حذف المحتوى المخالف فوراً وإرسال إشعار تنبيهي للحساب.</li>
+                    <li><strong>الإنذار الثاني:</strong> سحب صلاحية إضافة المنشورات والملفات (<code>canUserAddContent</code>) لمدة 3 أيام مع حذف الملف المخالف.</li>
+                    <li><strong>الإنذار الثالث:</strong> حظر دخول الحساب وتوقيفه عن التصفح لمدة 7 أيام.</li>
+                    <li><strong>العقوبة النهائية:</strong> إدراج جلسة المستخدم والمعرف الخاص به ضمن قائمة الحظر (<code>banned_users</code>) وتوقيف الحساب نهائياً.</li>
+                </ol>
+            </section>
+
+            <section class="policy-admin-note">
+                <h4>رابعاً: الإشعارات وصلاحيات المشرف</h4>
+                <p>يتم إرسال الإنذارات عبر الإشعارات الرسمية الموجودة في الصفحة الرئيسية للمستخدم المخالف. يملك المشرف أو مدير النظام <strong>أبو جراح</strong> الصلاحيات التامة لإرسال الإنذارات المتعلقة بأي منشور، وإيقاف أي مستخدم أو إرجاعه وإلغاء الحظر عنه في أي وقت، وذلك من نافذة بيانات الأعضاء.</p>
+            </section>
+        </div>
+
+        <div class="modal-actions policy-modal-actions">
+            <button onclick="closeModal('usagePolicyModal')" class="glass-btn primary-btn">فهمت، متابعة الاستخدام</button>
+        </div>
+    </div>
 </div>
 
 <!-- نافذة إضافة إعلان جديد -->
