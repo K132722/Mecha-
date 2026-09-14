@@ -97,6 +97,7 @@
 
         <div class="header-actions">
             <span id="netStatusBadge" class="net-badge online">⚡ متصل</span>
+            <button id="btnOnlineUsers" class="icon-btn online-users-trigger" title="المتصلون حالياً" onclick="openOnlineUsersModal()">🟢</button>
             <button id="btnNotifCenter" class="icon-btn" title="الإشعارات">🔔</button>
             <button id="btnLogout" class="icon-btn danger" title="خروج">🚪</button>
         </div>
@@ -146,6 +147,23 @@
         </button>
     </section>
 
+</div>
+
+<!-- نافذة المتصلين حالياً -->
+<div class="modal-overlay" id="onlineUsersModal">
+    <div class="glass-card modal-box large-modal online-users-modal">
+        <div class="online-users-modal-header">
+            <div>
+                <span class="online-kicker">الحضور المباشر</span>
+                <h3>🟢 المتصلون حالياً</h3>
+            </div>
+            <button onclick="closeModal('onlineUsersModal')" class="online-close-btn">✕</button>
+        </div>
+        <div id="onlineUsersList" class="online-users-list">
+            <p class="empty-banner">جاري تحميل حالة الاتصال...</p>
+        </div>
+        <div class="online-users-footer">تتحدث الحالة تلقائياً كل 30 ثانية</div>
+    </div>
 </div>
 
 <!-- نافذة سياسة الاستخدام والقوانين والعقوبات -->

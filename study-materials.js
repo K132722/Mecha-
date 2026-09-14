@@ -46,6 +46,18 @@ const ACCOUNT_FIREBASE_CONFIG = {
     appId: "1:75339042920:web:2f58ca848a8328afc06bdd"
 };
 let accountDb = null;
+let accountPresenceHeartbeat = null;
+let personalNotificationListener = null;
+const STUDY_MEMBER_NAMES = {
+    '774132722': 'أبو جراح الخولاني',
+    '774339391': 'أحمد الأصبحي',
+    '774882442': 'أحمد أنعم',
+    '776677398': 'أيمن العودي',
+    '779865375': 'حمزة غراب',
+    '772261443': 'إلياس العصيمي',
+    '773611986': 'أحمد الحجي',
+    '777598384': 'سليم الوافي'
+};
 
 // ========================================================================
 // 3. نظام التخزين المحلي الذكي (IndexedDB + localStorage)
@@ -554,6 +566,79 @@ function initAccountFirebase() {
         accountDb = null;
         return false;
     }
+}
+
+function getAccountDeviceRef() {
+    const user = getStudyUser();
+    if (!accountDb || !user?.phone || !user?.deviceId) return null;
+    return accountDb.ref(`users/${user.phone}/devices/${user.deviceId}`);
+}
+
+function startStudyPresenceTracking() {
+    const ref = getAccountDeviceRef();
+    if (!ref || !isOnline) return;
+    const payload = () => ({
+        online: true,
+        lastSeenAt: Date.now(),
+        lastSeen: new Date().toLocaleString('ar-YE')
+    });
+    ref.onDisconnect().update({
+        online: false,
+        lastSeenAt: Date.now(),
+        lastSeen: new Date().toLocaleString('ar-YE')
+    }).catch(() => {});
+    const beat = () => ref.update(payload()).catch(() => {});
+    beat();
+    clearInterval(accountPresenceHeartbeat);
+    accountPresenceHeartbeat = setInterval(beat, 30000);
+}
+
+async function openOnlineUsersModal() {
+    const modal = document.getElementById('onlineUsersModal');
+    const list = document.getElementById('onlineUsersList');
+    if (!modal || !list) return;
+    modal.classList.add('active');
+    list.innerHTML = '<div class="chat-empty-state">جاري تحميل حالة الاتصال...</div>';
+    if (!accountDb || !isOnline) {
+        list.innerHTML = '<div class="chat-empty-state">تحتاج هذه القائمة إلى اتصال بالإنترنت.</div>';
+        return;
+    }
+    try {
+        const snapshot = await accountDb.ref('users').once('value');
+        const users = snapshot.val() || {};
+        const rows = [];
+        Object.entries(STUDY_MEMBER_NAMES).forEach(([phone, name]) => {
+            Object.entries(users[phone]?.devices || {}).forEach(([deviceId, device]) => {
+                if (device?.online === true || (device?.lastSeenAt && Date.now() - Number(device.lastSeenAt) < 90000)) {
+                    rows.push({ name, deviceId, device });
+                }
+            });
+        });
+        list.innerHTML = rows.length ? rows.map(row => `
+            <div class="online-global-row">
+                <span class="online-dot">●</span>
+                <div><strong>${escapeHtml(row.name)}</strong><small>الجهاز ${escapeHtml(row.deviceId)} · آخر نشاط ${escapeHtml(row.device.lastSeen || row.device.lastActive || 'الآن')}</small></div>
+                <span class="online-now">متصل</span>
+            </div>
+        `).join('') : '<div class="chat-empty-state">لا يوجد مستخدمون متصلون حالياً.</div>';
+    } catch (error) {
+        list.innerHTML = '<div class="chat-empty-state">تعذر تحميل قائمة المتصلين.</div>';
+    }
+}
+
+function startPersonalNotificationListener() {
+    const user = getStudyUser();
+    if (!accountDb || !isOnline || !user?.phone || personalNotificationListener) return;
+    const ref = accountDb.ref(`user_notifications/${user.phone}`).limitToLast(50);
+    const listener = snapshot => {
+        const notification = snapshot.val();
+        if (!notification) return;
+        const isDuplicate = notificationsData.some(item => item.id === notification.id || (item.message === notification.message && item.timestamp === notification.timestamp));
+        if (isDuplicate) return;
+        addNotification({ ...notification, id: notification.id || snapshot.key, type: notification.type || 'notification' });
+    };
+    ref.on('child_added', listener);
+    personalNotificationListener = { ref, listener };
 }
 
 async function loadStudyAccountStatus() {
@@ -4104,7 +4189,9 @@ async function initStudyApp() {
     await updateStorageIndicator();
     updateStatusBar(isOnline ? '🌐 متصل · الكاش جاهز' : '📦 أوفلاين · البيانات المحلية');
     initConnectionMonitoring();
+    startStudyPresenceTracking();
     if (isOnline && studyDb) startNotificationListener();
+    if (isOnline && accountDb) startPersonalNotificationListener();
     if (isOnline && studyDb) listenToGroupChat();
     showStudyInstructionsOnFirstVisit();
     setTimeout(async () => {
@@ -5338,6 +5425,7 @@ function cleanGroupChatMessage(message) {
         text: message.text || '',
         timestamp: Number(message.timestamp || Date.now()),
         pending: Boolean(message.pending),
+        readBy: { ...(message.readBy || {}) },
         contentRef: cleanGroupChatContentRef(message.contentRef || message.lectureRef),
         files: studyArray(message.files).map(file => {
             const clean = { ...file };
@@ -5346,6 +5434,47 @@ function cleanGroupChatMessage(message) {
             return clean;
         })
     };
+}
+
+function getChatMemberName(memberId) {
+    const key = String(memberId || '');
+    return STUDY_MEMBER_NAMES[key] || (getStudyUser()?.id === memberId ? studyUserLabel(getStudyUser()) : `مستخدم ${key.slice(-4)}`);
+}
+
+function markGroupChatMessageSeen(message) {
+    if (typeof message === 'string') {
+        message = groupChatMessages.find(item => String(item.id) === message);
+    }
+    const userId = getGroupChatCurrentUserId();
+    if (!message?.id || !userId || String(message.senderId) === userId || !studyDb || !isOnline || message.pending) return;
+    if (message.readBy?.[userId]) return;
+    studyDb.ref(`study_group_chat/messages/${message.id}/readBy/${userId}`).set({
+        at: Date.now(),
+        name: studyUserLabel(getStudyUser())
+    }).catch(() => {});
+}
+
+function showGroupChatMessageReaders(messageId) {
+    const message = groupChatMessages.find(item => String(item.id) === String(messageId));
+    if (!message || String(message.senderId) !== getGroupChatCurrentUserId()) return;
+    const readBy = message.readBy || {};
+    const recipients = Object.keys(STUDY_MEMBER_NAMES).filter(id => id !== String(message.senderId));
+    const seen = recipients.filter(id => readBy[id]);
+    const unseen = recipients.filter(id => !readBy[id]);
+    let modal = document.getElementById('chatReadersModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'chatReadersModal';
+        modal.className = 'modal-overlay-advanced';
+        modal.innerHTML = '<div class="modal-box-advanced chat-readers-modal"><div class="chat-readers-head"><h3>👁️ مشاهدة الرسالة</h3><button class="close-panel" onclick="closeModal(\'chatReadersModal\')">✕</button></div><div id="chatReadersBody"></div></div>';
+        document.body.appendChild(modal);
+    }
+    const body = document.getElementById('chatReadersBody');
+    body.innerHTML = `
+        <div class="readers-group"><strong>شاهدوا الرسالة (${seen.length})</strong>${seen.length ? seen.map(id => `<span class="reader-chip seen">● ${escapeHtml(getChatMemberName(id))}</span>`).join('') : '<span class="readers-empty">لم يشاهدها أحد بعد</span>'}</div>
+        <div class="readers-group"><strong>لم يشاهدوها بعد (${unseen.length})</strong>${unseen.length ? unseen.map(id => `<span class="reader-chip unseen">○ ${escapeHtml(getChatMemberName(id))}</span>`).join('') : '<span class="readers-empty">الجميع شاهد الرسالة</span>'}</div>
+    `;
+    modal.classList.add('active');
 }
 
 function cleanGroupChatContentRef(reference) {
@@ -5448,13 +5577,15 @@ function renderGroupChatMessages() {
     container.innerHTML = groupChatMessages.map(message => {
         const own = currentUserId && String(message.senderId) === currentUserId;
         const files = studyArray(message.files);
+        const seenCount = Object.keys(message.readBy || {}).filter(id => id !== currentUserId).length;
         return `
-            <article class="chat-message ${own ? 'own' : ''}">
+            <article class="chat-message ${own ? 'own' : ''}" ${own ? `ondblclick="showGroupChatMessageReaders(${studySafeJs(message.id)})" title="انقر مرتين لمعرفة من شاهد الرسالة"` : `onclick="markGroupChatMessageSeen(${studySafeJs(message.id)})"`}>
                 <div class="chat-sender">${escapeHtml(message.senderName || 'مستخدم')}</div>
                 ${message.text ? `<div class="chat-text">${escapeHtml(message.text)}</div>` : ''}
                 ${(message.contentRef || message.lectureRef) ? `
                     <div class="chat-mention-card">
                         <span class="chat-mention-label">🔗 ${escapeHtml((message.contentRef || message.lectureRef).title || 'محتوى مشار إليه')}</span>
+                            <span class="chat-mention-path">📍 ${escapeHtml((message.contentRef || message.lectureRef).pathDisplay || (message.contentRef || message.lectureRef).path || '')}</span>
                         <button class="chat-mention-open" onclick="goToChatMention(${studySafeJs(message.id)})">فتح المحتوى ↗</button>
                     </div>` : ''}
                 ${files.length ? `
@@ -5466,6 +5597,7 @@ function renderGroupChatMessages() {
                         `).join('')}
                     </div>` : ''}
                 <span class="chat-time">${escapeHtml(studyDate(message.timestamp))}</span>
+                ${own && !message.pending ? `<button class="chat-seen-summary" onclick="event.stopPropagation(); showGroupChatMessageReaders(${studySafeJs(message.id)})">👁️ شاهدها ${seenCount} من الأعضاء</button>` : ''}
                 ${message.pending ? '<span class="chat-pending">⏳ محفوظ محلياً</span>' : ''}
             </article>
         `;
@@ -5635,6 +5767,7 @@ async function openGroupChatPanel() {
     renderGroupChatMessages();
     bindGroupChatComposer();
     listenToGroupChat();
+    groupChatMessages.filter(message => String(message.senderId) !== getGroupChatCurrentUserId()).forEach(markGroupChatMessageSeen);
     await syncPendingGroupChatMessages();
     markGroupChatMessagesRead();
     const status = document.getElementById('groupChatStatus');

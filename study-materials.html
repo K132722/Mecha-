@@ -2805,6 +2805,71 @@
     </div>
 </div>
 
+<!-- حضور المستخدمين من جميع صفحات المواد -->
+<button class="online-users-global-trigger" id="onlineUsersGlobalTrigger" onclick="openOnlineUsersModal()" aria-label="المتصلون حالياً">
+    🟢 <span>المتصلون</span>
+</button>
+<div class="modal-overlay-advanced online-users-global-overlay" id="onlineUsersModal">
+    <div class="modal-box-advanced online-users-global-modal">
+        <div class="online-users-global-head">
+            <div>
+                <small>الحضور المباشر</small>
+                <h3>🟢 المتصلون حالياً</h3>
+            </div>
+            <button onclick="closeModal('onlineUsersModal')" class="close-panel">✕</button>
+        </div>
+        <div id="onlineUsersList" class="online-users-global-list">
+            <div class="chat-empty-state">جاري تحميل حالة الاتصال...</div>
+        </div>
+        <small class="online-users-global-foot">تتحدث الحالة تلقائياً كل 30 ثانية</small>
+    </div>
+</div>
+<style>
+    .online-users-global-trigger {
+        position: fixed;
+        left: 16px;
+        bottom: 18px;
+        z-index: 1300;
+        border: 1px solid rgba(74,222,128,.35);
+        background: rgba(8,27,34,.9);
+        color: #83f0a4;
+        border-radius: 999px;
+        padding: 9px 13px;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(0,0,0,.25);
+        backdrop-filter: blur(12px);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .online-users-global-trigger:hover { transform: translateY(-2px); border-color: #4ade80; }
+    .online-users-global-overlay { z-index: 1400; }
+    .online-users-global-modal { width: min(92vw, 460px); max-height: 78vh; }
+    .online-users-global-head { display:flex; justify-content:space-between; align-items:flex-start; }
+    .online-users-global-head small, .online-users-global-foot { color: #70e898; font-size: 10px; }
+    .online-users-global-head h3 { margin-top: 4px; }
+    .online-users-global-list { max-height: 52vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+    .online-global-row { display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:12px; background:rgba(74,222,128,.06); border:1px solid rgba(74,222,128,.14); }
+    .online-global-row .online-dot { color:#4ade80; font-size:16px; text-shadow:0 0 12px rgba(74,222,128,.7); }
+    .online-global-row div { flex:1; min-width:0; }
+    .online-global-row strong, .online-global-row small { display:block; }
+    .online-global-row strong { color:#f2f6fc; font-size:13px; }
+    .online-global-row small { color:rgba(226,239,255,.62); font-size:10px; margin-top:3px; }
+    .online-global-row .online-now { color:#4ade80; font-size:10px; font-weight:700; }
+    .online-users-global-foot { display:block; text-align:center; margin-top:10px; color:rgba(226,239,255,.5); }
+    .chat-mention-path { display:block; color:rgba(226,239,255,.6); font-size:10px; margin-top:3px; }
+    .chat-seen-summary { align-self:flex-start; margin-top:4px; border:0; background:transparent; color:rgba(226,239,255,.62); font:inherit; font-size:9px; cursor:pointer; padding:0; }
+    .chat-message.own { cursor:pointer; }
+    .chat-readers-modal { width:min(92vw, 440px); }
+    .chat-readers-head { display:flex; align-items:center; justify-content:space-between; }
+    .readers-group { display:flex; flex-wrap:wrap; gap:6px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.08); }
+    .readers-group strong { width:100%; color:#f0d080; font-size:12px; margin-bottom:2px; }
+    .reader-chip { padding:5px 8px; border-radius:999px; font-size:10px; }
+    .reader-chip.seen { color:#80efac; background:rgba(74,222,128,.1); }
+    .reader-chip.unseen { color:#a6b4c6; background:rgba(255,255,255,.06); }
+    .readers-empty { color:rgba(226,239,255,.52); font-size:11px; }
+</style>
+
 <!-- ============================================================
      📋 لوحة الإشعارات
      ============================================================ -->

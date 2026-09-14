@@ -41,6 +41,10 @@ let hiddenRandomNumber = null;
 let notificationsData = [];
 let unreadCount = 0;
 let isFirstLoad = true; // لمنع تكرار التحقق
+let presenceHeartbeat = null;
+let bannerLiveListener = null;
+let lastLiveBannerId = null;
+let notificationLiveListener = null;
 const USAGE_POLICY_VERSION = '1';
 const USAGE_POLICY_SEEN_PREFIX = 'usage_policy_seen_v';
 const ACCOUNT_STATUS_CACHE_PREFIX = 'account_status_';
@@ -122,6 +126,125 @@ function isAdminAccount(user = currentUser) {
         phone === ADMIN_PHONE.replace('+967', '');
 }
 
+function currentPresenceRef() {
+    if (!db || !currentUser?.phone || !currentUser?.deviceId) return null;
+    return db.ref(`users/${currentUser.phone}/devices/${currentUser.deviceId}/presence`);
+}
+
+function updatePresence(isOnline = true) {
+    const ref = currentPresenceRef();
+    if (!ref) return;
+    const now = Date.now();
+    const payload = {
+        online: Boolean(isOnline),
+        lastSeenAt: now,
+        lastSeen: new Date(now).toLocaleString('ar-YE')
+    };
+    ref.update(payload).catch(() => {});
+    db.ref(`users/${currentUser.phone}/devices/${currentUser.deviceId}`).update(payload).catch(() => {});
+}
+
+function startPresenceTracking() {
+    const ref = currentPresenceRef();
+    if (!ref || !navigator.onLine) return;
+    ref.onDisconnect().update({
+        online: false,
+        lastSeenAt: Date.now(),
+        lastSeen: new Date().toLocaleString('ar-YE')
+    }).catch(() => {});
+    updatePresence(true);
+    clearInterval(presenceHeartbeat);
+    presenceHeartbeat = setInterval(() => {
+        if (navigator.onLine) updatePresence(true);
+    }, 30000);
+}
+
+function stopPresenceTracking() {
+    clearInterval(presenceHeartbeat);
+    presenceHeartbeat = null;
+    updatePresence(false);
+}
+
+function listenToLiveBanner() {
+    if (!db || bannerLiveListener) return;
+    bannerLiveListener = db.ref('current_banner');
+    bannerLiveListener.on('value', snapshot => {
+        const banner = snapshot.val();
+        if (!banner) return;
+        const bannerId = String(banner.id || banner.updatedAt || banner.timestamp || '');
+        const isNew = Boolean(lastLiveBannerId && bannerId && bannerId !== lastLiveBannerId);
+        lastLiveBannerId = bannerId;
+        localStorage.setItem('cached_banner_data', JSON.stringify(banner));
+        renderBanner(banner);
+        if (isNew && currentUser) {
+            const date = document.getElementById('bannerDate');
+            if (date) date.innerHTML = `${banner.timestamp || ''} <span class="live-update-pill">محدث الآن</span>`;
+        }
+    });
+}
+
+function startPersonalNotificationListener() {
+    if (!db || !currentUser?.phone || notificationLiveListener) return;
+    const path = isAdminAccount() ? 'admin_notifications' : `user_notifications/${currentUser.phone}`;
+    const ref = db.ref(path).limitToLast(50);
+    const listener = snapshot => {
+        const value = snapshot.val();
+        if (!value) return;
+        const notification = { ...value, id: value.id || snapshot.key };
+        if (notificationsData.some(item => item.id === notification.id || (item.message === notification.message && item.timestamp === notification.timestamp))) return;
+        notificationsData.unshift(notification);
+        notificationsData = notificationsData.slice(0, 100);
+        localStorage.setItem(notificationsStorageKey(), JSON.stringify(notificationsData));
+        updateNotificationBadge();
+        if (document.getElementById('notificationsModal')?.style.display === 'flex') {
+            renderNotificationsList();
+        }
+    };
+    ref.on('child_added', listener);
+    notificationLiveListener = { ref, listener };
+}
+
+async function openOnlineUsersModal() {
+    const modal = document.getElementById('onlineUsersModal');
+    const list = document.getElementById('onlineUsersList');
+    if (!modal || !list) return;
+    modal.style.display = 'flex';
+    list.innerHTML = '<p class="empty-banner">جاري تحميل حالة الاتصال...</p>';
+    if (!db || !navigator.onLine) {
+        list.innerHTML = '<p class="empty-banner">تحتاج هذه القائمة إلى اتصال بالإنترنت.</p>';
+        return;
+    }
+    try {
+        const snapshot = await db.ref('users').once('value');
+        const users = snapshot.val() || {};
+        const rows = [];
+        Object.entries(MEMBERS).forEach(([phone, member]) => {
+            const devices = users[phone]?.devices || {};
+            Object.entries(devices).forEach(([deviceId, device]) => {
+                if (device?.online === true || (device?.lastSeenAt && Date.now() - Number(device.lastSeenAt) < 90000)) {
+                    rows.push({ phone, member, deviceId, device });
+                }
+            });
+        });
+        if (!rows.length) {
+            list.innerHTML = '<p class="empty-banner">لا يوجد مستخدمون متصلون حالياً.</p>';
+            return;
+        }
+        list.innerHTML = rows.map(row => `
+            <div class="online-user-row">
+                <span class="online-avatar">●</span>
+                <div>
+                    <strong>${row.member.name}</strong>
+                    <small>الجهاز ${row.deviceId} · آخر نشاط ${row.device.lastSeen || row.device.lastActive || 'الآن'}</small>
+                </div>
+                <span class="online-now">متصل</span>
+            </div>
+        `).join('');
+    } catch (error) {
+        list.innerHTML = '<p class="empty-banner">تعذر تحميل قائمة المتصلين حالياً.</p>';
+    }
+}
+
 async function fetchAccountStatus(phone) {
     const cached = readCachedAccountStatus(phone);
     if (!db || !navigator.onLine || !phone) {
@@ -143,21 +266,6 @@ async function fetchAccountStatus(phone) {
 
 function enforceAccountRestriction(status) {
     const message = accountStatusMessage(status);
-    if (!message) return;
-    localStorage.removeItem('mecha_user_session');
-    localStorage.removeItem('mecha_logged_in');
-    currentUser = null;
-    currentMember = null;
-    showLoginScreen();
-    const loginMsg = document.getElementById('loginMsg');
-    if (loginMsg) {
-        loginMsg.innerHTML = message;
-        loginMsg.style.color = '#ff4757';
-    }
-}
-
-function enforceDeviceRestriction(deviceData) {
-    const message = deviceStatusMessage(deviceData);
     if (!message) return;
     localStorage.removeItem('mecha_user_session');
     localStorage.removeItem('mecha_logged_in');
@@ -409,10 +517,6 @@ async function handleDeviceRegistration(phone, deviceId) {
         const devices = snap.val() || {};
 
         if (devices[deviceId]) {
-            if (deviceStatusIsBlocked(devices[deviceId])) {
-                enforceDeviceRestriction(devices[deviceId]);
-                return;
-            }
             completeLogin(phone, deviceId);
             return;
         }
@@ -541,15 +645,11 @@ async function verifyDeviceSessionInBackground(user) {
         const snap = await db.ref(`users/${user.phone}/devices/${user.deviceId}`).once('value');
         const deviceData = snap.val();
 
-        if (deviceData && deviceStatusIsBlocked(deviceData)) {
-            console.log('⚠️ الجهاز موقوف أو محظور، تسجيل الخروج...');
-            enforceDeviceRestriction(deviceData);
-            return;
-        }
-
-        if (!deviceData) {
-            // إذا لم يعد الجهاز مسجلاً، نقوم بتسجيل الخروج
-            console.log('⚠️ الجهاز غير مسجل، تسجيل الخروج...');
+        if (!deviceData ||
+            (deviceData.status === 'suspended' && (!deviceData.suspendedUntil || Number(deviceData.suspendedUntil) > Date.now())) ||
+            deviceData.status === 'banned') {
+            // إذا تم تعليق الجهاز، نقوم بتسجيل الخروج
+            console.log('⚠️ الجهاز تم تعليقه، تسجيل الخروج...');
             localStorage.removeItem('mecha_user_session');
             localStorage.removeItem('mecha_logged_in');
             showLoginScreen();
@@ -611,13 +711,15 @@ function launchAppDirectly() {
 
     // تحميل البيانات
     loadBannerLocallyOrOnline(false);
-    listenBannerLive();
     loadNotifications();
     showUsagePolicyOnFirstVisit();
 
     if (isAdmin) {
         loadPendingApprovals();
     }
+    startPresenceTracking();
+    listenToLiveBanner();
+    startPersonalNotificationListener();
 }
 
 // ==========================================================================
@@ -899,31 +1001,27 @@ async function loadUsersDevicesData() {
 
             let devicesList = '';
             if (deviceCount > 0) {
-                const isOperator = currentUser?.phone === ADMIN_PHONE;
                 devicesList = `
                     <div style="font-size:10px; color:var(--text-dim); margin-top:6px;">
                         <div style="font-weight:600; color:var(--text-muted);">الأجهزة:</div>
                         ${deviceKeys.map(did => {
-                            const dev = userDevices[did] || {};
-                            const dStatus = deviceStatusInfo(dev);
+                            const device = userDevices[did] || {};
+                            const blocked = device.status === 'suspended' || device.status === 'banned';
                             return `
-                            <div style="padding:5px 4px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                            <div style="padding:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <div style="display:flex;justify-content:space-between;gap:6px;">
                                     <span>📱 ${did}</span>
-                                    <span style="color:${dStatus.color};">${dStatus.label}</span>
+                                    <span style="color:${device.online ? '#2ed573' : '#7a8a9a'};">${device.online ? '🟢 متصل' : '⚪ غير متصل'} · ${device.status || 'نشط'}</span>
                                 </div>
-                                ${isOperator ? `
-                                <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">
-                                    <button onclick="issueDeviceWarning('${phone}','${did}')" style="background:rgba(255,165,0,.14); color:#ffc04d; border:1px solid rgba(255,165,0,.3); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">⚠️ إنذار</button>
-                                    ${dStatus.isSuspended
-                                        ? `<button onclick="restoreDeviceAccess('${phone}','${did}')" style="background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.25); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">✅ رفع الإيقاف</button>`
-                                        : `<button onclick="suspendDeviceAccess('${phone}','${did}')" style="background:rgba(255,107,122,.12); color:#ff8794; border:1px solid rgba(255,107,122,.25); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">⏸️ إيقاف مؤقت</button>`}
-                                    ${dStatus.isBanned
-                                        ? `<button onclick="restoreDeviceAccess('${phone}','${did}')" style="background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.25); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">🔓 إلغاء حظر الجهاز</button>`
-                                        : `<button onclick="banDeviceAccess('${phone}','${did}')" style="background:rgba(255,71,87,.14); color:#ff6b7a; border:1px solid rgba(255,71,87,.3); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">⛔ حظر الجهاز نهائياً</button>`}
-                                </div>` : ''}
-                            </div>
-                        `}).join('')}
+                                <div style="display:flex;align-items:center;gap:5px;margin-top:4px;">
+                                    <span style="flex:1;color:var(--text-dim);">آخر اتصال: ${device.lastSeen || device.lastActive || 'غير معروف'}</span>
+                                    ${blocked
+                                        ? `<button onclick="restoreDeviceAccess('${phone}','${did}')" style="background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.25);padding:4px 7px;border-radius:6px;cursor:pointer;font-size:9px;">🔓 إعادة السماح</button>`
+                                        : `<button onclick="suspendDevice('${phone}','${did}')" style="background:rgba(255,107,122,.12);color:#ff8794;border:1px solid rgba(255,107,122,.25);padding:4px 7px;border-radius:6px;cursor:pointer;font-size:9px;">⏸️ مؤقت</button>
+                                           <button onclick="banDevice('${phone}','${did}')" style="background:rgba(255,71,87,.12);color:#ff6b7a;border:1px solid rgba(255,71,87,.25);padding:4px 7px;border-radius:6px;cursor:pointer;font-size:9px;">⛔ نهائي</button>`}
+                                </div>
+                            </div>`;
+                        }).join('')}
                     </div>
                 `;
             }
@@ -1173,116 +1271,68 @@ async function restoreMemberAccess(phone) {
     }
 }
 
-// ==========================================================================
-// 17ب. صلاحيات المشرف على جهاز محدد من أجهزة العضو
-// ==========================================================================
-function deviceStatusInfo(dev = {}) {
-    const now = Date.now();
-    const isBanned = dev.status === 'banned';
-    const isSuspended = dev.status === 'suspended' && (!dev.suspendedUntil || dev.suspendedUntil > now);
-    if (isBanned) return { label: '⛔ محظور نهائياً', color: '#ff4757', isBanned: true, isSuspended: false };
-    if (isSuspended) {
-        const until = dev.suspendedUntil ? new Date(dev.suspendedUntil).toLocaleString('ar-YE') : 'حتى إشعار آخر';
-        return { label: `🔴 موقوف حتى ${until}`, color: '#ffa500', isBanned: false, isSuspended: true };
-    }
-    return { label: dev.status === 'active' || !dev.status ? '🟢 نشط' : dev.status, color: '#2ed573', isBanned: false, isSuspended: false };
-}
-
-function deviceStatusIsBlocked(dev) {
-    if (!dev) return false;
-    const info = deviceStatusInfo(dev);
-    return info.isBanned || info.isSuspended;
-}
-
-function deviceStatusMessage(dev) {
-    const info = deviceStatusInfo(dev);
-    if (info.isBanned) {
-        return `⛔ تم حظر هذا الجهاز نهائياً من استخدام التطبيق. السبب: ${dev?.reason || 'مخالفة سياسة الاستخدام'}`;
-    }
-    if (info.isSuspended) {
-        const until = dev?.suspendedUntil ? new Date(dev.suspendedUntil).toLocaleString('ar-YE') : 'حتى إشعار آخر';
-        return `🔴 تم إيقاف هذا الجهاز مؤقتاً حتى ${until}. السبب: ${dev?.reason || 'مخالفة سياسة الاستخدام'}`;
-    }
-    return '';
-}
-
-async function issueDeviceWarning(phone, deviceId) {
+async function suspendDevice(phone, deviceId) {
     if (!moderationActionReady()) return;
-    const reason = prompt('سبب إنذار هذا الجهاز:', 'مخالفة سياسة الاستخدام');
-    if (!reason?.trim()) return;
-    try {
-        await sendMemberModerationNotification(phone, '🟡 إنذار متعلق بجهازك', `تم تسجيل إنذار على الجهاز (${deviceId}): ${reason.trim()}`, { deviceId, reason: reason.trim() });
-        alert('✅ تم إرسال الإنذار الخاص بالجهاز للمستخدم.');
-    } catch (error) {
-        console.error('تعذر إرسال إنذار الجهاز:', error);
-        alert('❌ تعذر إرسال الإنذار.');
-    }
-}
-
-async function suspendDeviceAccess(phone, deviceId) {
-    if (!moderationActionReady()) return;
-    const daysText = prompt('مدة إيقاف هذا الجهاز بالأيام:', '7');
-    const days = Number(daysText);
+    const days = Number(prompt('مدة إيقاف الجهاز بالأيام:', '7'));
     if (!Number.isFinite(days) || days <= 0) return;
     const reason = prompt('سبب إيقاف الجهاز:', 'مخالفة سياسة الاستخدام');
     if (!reason?.trim()) return;
-    const suspendedUntil = Date.now() + (days * 24 * 60 * 60 * 1000);
     try {
+        const suspendedUntil = Date.now() + days * 24 * 60 * 60 * 1000;
         await db.ref(`users/${phone}/devices/${deviceId}`).update({
             status: 'suspended',
             suspendedUntil,
             reason: reason.trim(),
+            online: false,
             updatedAt: Date.now(),
             updatedBy: ADMIN_PHONE
         });
-        await sendMemberModerationNotification(phone, '🔴 تم إيقاف أحد أجهزتك مؤقتاً', `تم إيقاف الجهاز (${deviceId}) لمدة ${days} يوماً. السبب: ${reason.trim()}`, { deviceId, suspendedUntil, reason: reason.trim() });
-        alert('✅ تم إيقاف الجهاز وإرسال الإشعار للمستخدم.');
+        await sendMemberModerationNotification(phone, '🔴 تم إيقاف جهاز', `تم إيقاف الجهاز ${deviceId} لمدة ${days} يوماً. السبب: ${reason.trim()}`, { deviceId, suspendedUntil });
+        alert('✅ تم إيقاف الجهاز وإرسال إشعار خاص للمستخدم.');
         loadUsersDevicesData();
     } catch (error) {
-        console.error('تعذر إيقاف الجهاز:', error);
-        alert('❌ تعذر تنفيذ إيقاف الجهاز.');
+        alert('❌ تعذر إيقاف الجهاز.');
     }
 }
 
-async function banDeviceAccess(phone, deviceId) {
+async function banDevice(phone, deviceId) {
     if (!moderationActionReady()) return;
-    if (!confirm('هل أنت متأكد من حظر هذا الجهاز نهائياً؟')) return;
-    const reason = prompt('سبب الحظر النهائي للجهاز:', 'تكرار مخالفة سياسة الاستخدام');
-    if (!reason?.trim()) return;
+    const reason = prompt('سبب الحظر النهائي للجهاز:', 'مخالفة أمنية');
+    if (!reason?.trim() || !confirm('هل تريد حظر هذا الجهاز نهائياً؟')) return;
     try {
         await db.ref(`users/${phone}/devices/${deviceId}`).update({
             status: 'banned',
-            reason: reason.trim(),
+            banned: true,
             bannedAt: Date.now(),
-            updatedAt: Date.now(),
+            reason: reason.trim(),
+            online: false,
             updatedBy: ADMIN_PHONE
         });
-        await sendMemberModerationNotification(phone, '⛔ تم حظر أحد أجهزتك نهائياً', `تم حظر الجهاز (${deviceId}) نهائياً من استخدام التطبيق. السبب: ${reason.trim()}`, { deviceId, reason: reason.trim() });
-        alert('✅ تم حظر الجهاز وإرسال الإشعار للمستخدم.');
+        await sendMemberModerationNotification(phone, '⛔ تم حظر جهاز نهائياً', `تم حظر الجهاز ${deviceId} نهائياً. السبب: ${reason.trim()}`, { deviceId });
+        alert('✅ تم حظر الجهاز وإرسال إشعار خاص للمستخدم.');
         loadUsersDevicesData();
     } catch (error) {
-        console.error('تعذر حظر الجهاز:', error);
-        alert('❌ تعذر تنفيذ حظر الجهاز.');
+        alert('❌ تعذر حظر الجهاز.');
     }
 }
 
 async function restoreDeviceAccess(phone, deviceId) {
     if (!moderationActionReady()) return;
-    if (!confirm('هل تريد إعادة السماح لهذا الجهاز باستخدام التطبيق؟')) return;
+    if (!confirm('هل تريد إعادة السماح لهذا الجهاز؟')) return;
     try {
         await db.ref(`users/${phone}/devices/${deviceId}`).update({
             status: 'active',
+            banned: false,
             suspendedUntil: 0,
             reason: '',
             restoredAt: Date.now(),
             restoredBy: ADMIN_PHONE
         });
-        await sendMemberModerationNotification(phone, '✅ تمت إعادة تفعيل جهازك', `تم إلغاء الإيقاف/الحظر عن الجهاز (${deviceId})، يمكنك استخدامه مجدداً.`, { deviceId });
+        await sendMemberModerationNotification(phone, '✅ تمت إعادة السماح بالجهاز', `تمت إعادة السماح للجهاز ${deviceId} ويمكن استخدام التطبيق مجدداً.`, { deviceId });
         alert('✅ تمت إعادة تفعيل الجهاز.');
         loadUsersDevicesData();
     } catch (error) {
-        console.error('تعذر إعادة تفعيل الجهاز:', error);
-        alert('❌ تعذر إعادة التفعيل.');
+        alert('❌ تعذر إعادة تفعيل الجهاز.');
     }
 }
 
@@ -1354,25 +1404,6 @@ async function loadBannerLocallyOrOnline(forceFetch = false) {
         console.error("خطأ في جلب بيانات الإعلان:", e);
         if (localBanner) renderBanner(JSON.parse(localBanner));
     }
-}
-
-// تحديث تلقائي فوري لحاوية الإعلانات عند نشر تحديث جديد من المشرف أبو جراح
-let bannerLiveListenerAttached = false;
-function listenBannerLive() {
-    if (bannerLiveListenerAttached || !db || !navigator.onLine) return;
-    bannerLiveListenerAttached = true;
-    db.ref('current_banner').on('value', (snap) => {
-        const data = snap.val();
-        if (!data) return;
-        let cached = null;
-        try { cached = JSON.parse(localStorage.getItem('cached_banner_data') || 'null'); } catch (e) {}
-        // لا تحديث إن لم يوجد تعميم جديد فعلياً من المشرف
-        if (cached && cached.id === data.id) return;
-        localStorage.setItem('cached_banner_data', JSON.stringify(data));
-        renderBanner(data);
-    }, (error) => {
-        console.warn('تعذر متابعة تحديث الإعلانات تلقائياً:', error);
-    });
 }
 
 function renderBanner(data) {
@@ -1583,8 +1614,12 @@ function setupEvents() {
     document.getElementById('btnLogout').addEventListener('click', () => {
         if (confirm('هل أنت متأكد من تسجيل الخروج؟ ستحتاج لإعادة التحقق.')) {
             if (currentUser && currentUser.phone && currentUser.deviceId && navigator.onLine && db) {
+                stopPresenceTracking();
                 db.ref(`users/${currentUser.phone}/devices/${currentUser.deviceId}`).update({
                     lastActive: new Date().toLocaleString('ar-YE'),
+                    lastSeenAt: Date.now(),
+                    lastSeen: new Date().toLocaleString('ar-YE'),
+                    online: false,
                     status: 'inactive'
                 });
             }
@@ -1609,8 +1644,15 @@ function updateNetworkStatus() {
     }
 }
 
-window.addEventListener('online', updateNetworkStatus);
-window.addEventListener('offline', updateNetworkStatus);
+window.addEventListener('online', () => {
+    updateNetworkStatus();
+    startPresenceTracking();
+    listenToLiveBanner();
+});
+window.addEventListener('offline', () => {
+    updateNetworkStatus();
+    updatePresence(false);
+});
 
 function openModal(id) { 
     const el = document.getElementById(id);
@@ -1718,3 +1760,6 @@ window.rejectDevice = rejectDevice;
 window.markNotificationRead = markNotificationRead;
 window.markAllNotificationsRead = markAllNotificationsRead;
 window.loadNotifications = loadNotifications;
+window.suspendDevice = suspendDevice;
+window.banDevice = banDevice;
+window.restoreDeviceAccess = restoreDeviceAccess;
