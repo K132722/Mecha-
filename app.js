@@ -156,6 +156,21 @@ function enforceAccountRestriction(status) {
     }
 }
 
+function enforceDeviceRestriction(deviceData) {
+    const message = deviceStatusMessage(deviceData);
+    if (!message) return;
+    localStorage.removeItem('mecha_user_session');
+    localStorage.removeItem('mecha_logged_in');
+    currentUser = null;
+    currentMember = null;
+    showLoginScreen();
+    const loginMsg = document.getElementById('loginMsg');
+    if (loginMsg) {
+        loginMsg.innerHTML = message;
+        loginMsg.style.color = '#ff4757';
+    }
+}
+
 function usagePolicySeenKey(phone) {
     return `${USAGE_POLICY_SEEN_PREFIX}${USAGE_POLICY_VERSION}_${String(phone || 'guest')}`;
 }
@@ -394,6 +409,10 @@ async function handleDeviceRegistration(phone, deviceId) {
         const devices = snap.val() || {};
 
         if (devices[deviceId]) {
+            if (deviceStatusIsBlocked(devices[deviceId])) {
+                enforceDeviceRestriction(devices[deviceId]);
+                return;
+            }
             completeLogin(phone, deviceId);
             return;
         }
@@ -522,9 +541,15 @@ async function verifyDeviceSessionInBackground(user) {
         const snap = await db.ref(`users/${user.phone}/devices/${user.deviceId}`).once('value');
         const deviceData = snap.val();
 
-        if (!deviceData || deviceData.status === 'suspended') {
-            // إذا تم تعليق الجهاز، نقوم بتسجيل الخروج
-            console.log('⚠️ الجهاز تم تعليقه، تسجيل الخروج...');
+        if (deviceData && deviceStatusIsBlocked(deviceData)) {
+            console.log('⚠️ الجهاز موقوف أو محظور، تسجيل الخروج...');
+            enforceDeviceRestriction(deviceData);
+            return;
+        }
+
+        if (!deviceData) {
+            // إذا لم يعد الجهاز مسجلاً، نقوم بتسجيل الخروج
+            console.log('⚠️ الجهاز غير مسجل، تسجيل الخروج...');
             localStorage.removeItem('mecha_user_session');
             localStorage.removeItem('mecha_logged_in');
             showLoginScreen();
@@ -586,6 +611,7 @@ function launchAppDirectly() {
 
     // تحميل البيانات
     loadBannerLocallyOrOnline(false);
+    listenBannerLive();
     loadNotifications();
     showUsagePolicyOnFirstVisit();
 
@@ -873,15 +899,31 @@ async function loadUsersDevicesData() {
 
             let devicesList = '';
             if (deviceCount > 0) {
+                const isOperator = currentUser?.phone === ADMIN_PHONE;
                 devicesList = `
                     <div style="font-size:10px; color:var(--text-dim); margin-top:6px;">
                         <div style="font-weight:600; color:var(--text-muted);">الأجهزة:</div>
-                        ${deviceKeys.map(did => `
-                            <div style="display:flex; justify-content:space-between; padding:2px 4px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                                <span>📱 ${did}</span>
-                                <span style="color:${userDevices[did].status === 'active' ? '#2ed573' : '#ff4757'};">${userDevices[did].status || 'نشط'}</span>
+                        ${deviceKeys.map(did => {
+                            const dev = userDevices[did] || {};
+                            const dStatus = deviceStatusInfo(dev);
+                            return `
+                            <div style="padding:5px 4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                                    <span>📱 ${did}</span>
+                                    <span style="color:${dStatus.color};">${dStatus.label}</span>
+                                </div>
+                                ${isOperator ? `
+                                <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">
+                                    <button onclick="issueDeviceWarning('${phone}','${did}')" style="background:rgba(255,165,0,.14); color:#ffc04d; border:1px solid rgba(255,165,0,.3); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">⚠️ إنذار</button>
+                                    ${dStatus.isSuspended
+                                        ? `<button onclick="restoreDeviceAccess('${phone}','${did}')" style="background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.25); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">✅ رفع الإيقاف</button>`
+                                        : `<button onclick="suspendDeviceAccess('${phone}','${did}')" style="background:rgba(255,107,122,.12); color:#ff8794; border:1px solid rgba(255,107,122,.25); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">⏸️ إيقاف مؤقت</button>`}
+                                    ${dStatus.isBanned
+                                        ? `<button onclick="restoreDeviceAccess('${phone}','${did}')" style="background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.25); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">🔓 إلغاء حظر الجهاز</button>`
+                                        : `<button onclick="banDeviceAccess('${phone}','${did}')" style="background:rgba(255,71,87,.14); color:#ff6b7a; border:1px solid rgba(255,71,87,.3); padding:3px 7px; border-radius:6px; cursor:pointer; font-size:9px;">⛔ حظر الجهاز نهائياً</button>`}
+                                </div>` : ''}
                             </div>
-                        `).join('')}
+                        `}).join('')}
                     </div>
                 `;
             }
@@ -1132,6 +1174,119 @@ async function restoreMemberAccess(phone) {
 }
 
 // ==========================================================================
+// 17ب. صلاحيات المشرف على جهاز محدد من أجهزة العضو
+// ==========================================================================
+function deviceStatusInfo(dev = {}) {
+    const now = Date.now();
+    const isBanned = dev.status === 'banned';
+    const isSuspended = dev.status === 'suspended' && (!dev.suspendedUntil || dev.suspendedUntil > now);
+    if (isBanned) return { label: '⛔ محظور نهائياً', color: '#ff4757', isBanned: true, isSuspended: false };
+    if (isSuspended) {
+        const until = dev.suspendedUntil ? new Date(dev.suspendedUntil).toLocaleString('ar-YE') : 'حتى إشعار آخر';
+        return { label: `🔴 موقوف حتى ${until}`, color: '#ffa500', isBanned: false, isSuspended: true };
+    }
+    return { label: dev.status === 'active' || !dev.status ? '🟢 نشط' : dev.status, color: '#2ed573', isBanned: false, isSuspended: false };
+}
+
+function deviceStatusIsBlocked(dev) {
+    if (!dev) return false;
+    const info = deviceStatusInfo(dev);
+    return info.isBanned || info.isSuspended;
+}
+
+function deviceStatusMessage(dev) {
+    const info = deviceStatusInfo(dev);
+    if (info.isBanned) {
+        return `⛔ تم حظر هذا الجهاز نهائياً من استخدام التطبيق. السبب: ${dev?.reason || 'مخالفة سياسة الاستخدام'}`;
+    }
+    if (info.isSuspended) {
+        const until = dev?.suspendedUntil ? new Date(dev.suspendedUntil).toLocaleString('ar-YE') : 'حتى إشعار آخر';
+        return `🔴 تم إيقاف هذا الجهاز مؤقتاً حتى ${until}. السبب: ${dev?.reason || 'مخالفة سياسة الاستخدام'}`;
+    }
+    return '';
+}
+
+async function issueDeviceWarning(phone, deviceId) {
+    if (!moderationActionReady()) return;
+    const reason = prompt('سبب إنذار هذا الجهاز:', 'مخالفة سياسة الاستخدام');
+    if (!reason?.trim()) return;
+    try {
+        await sendMemberModerationNotification(phone, '🟡 إنذار متعلق بجهازك', `تم تسجيل إنذار على الجهاز (${deviceId}): ${reason.trim()}`, { deviceId, reason: reason.trim() });
+        alert('✅ تم إرسال الإنذار الخاص بالجهاز للمستخدم.');
+    } catch (error) {
+        console.error('تعذر إرسال إنذار الجهاز:', error);
+        alert('❌ تعذر إرسال الإنذار.');
+    }
+}
+
+async function suspendDeviceAccess(phone, deviceId) {
+    if (!moderationActionReady()) return;
+    const daysText = prompt('مدة إيقاف هذا الجهاز بالأيام:', '7');
+    const days = Number(daysText);
+    if (!Number.isFinite(days) || days <= 0) return;
+    const reason = prompt('سبب إيقاف الجهاز:', 'مخالفة سياسة الاستخدام');
+    if (!reason?.trim()) return;
+    const suspendedUntil = Date.now() + (days * 24 * 60 * 60 * 1000);
+    try {
+        await db.ref(`users/${phone}/devices/${deviceId}`).update({
+            status: 'suspended',
+            suspendedUntil,
+            reason: reason.trim(),
+            updatedAt: Date.now(),
+            updatedBy: ADMIN_PHONE
+        });
+        await sendMemberModerationNotification(phone, '🔴 تم إيقاف أحد أجهزتك مؤقتاً', `تم إيقاف الجهاز (${deviceId}) لمدة ${days} يوماً. السبب: ${reason.trim()}`, { deviceId, suspendedUntil, reason: reason.trim() });
+        alert('✅ تم إيقاف الجهاز وإرسال الإشعار للمستخدم.');
+        loadUsersDevicesData();
+    } catch (error) {
+        console.error('تعذر إيقاف الجهاز:', error);
+        alert('❌ تعذر تنفيذ إيقاف الجهاز.');
+    }
+}
+
+async function banDeviceAccess(phone, deviceId) {
+    if (!moderationActionReady()) return;
+    if (!confirm('هل أنت متأكد من حظر هذا الجهاز نهائياً؟')) return;
+    const reason = prompt('سبب الحظر النهائي للجهاز:', 'تكرار مخالفة سياسة الاستخدام');
+    if (!reason?.trim()) return;
+    try {
+        await db.ref(`users/${phone}/devices/${deviceId}`).update({
+            status: 'banned',
+            reason: reason.trim(),
+            bannedAt: Date.now(),
+            updatedAt: Date.now(),
+            updatedBy: ADMIN_PHONE
+        });
+        await sendMemberModerationNotification(phone, '⛔ تم حظر أحد أجهزتك نهائياً', `تم حظر الجهاز (${deviceId}) نهائياً من استخدام التطبيق. السبب: ${reason.trim()}`, { deviceId, reason: reason.trim() });
+        alert('✅ تم حظر الجهاز وإرسال الإشعار للمستخدم.');
+        loadUsersDevicesData();
+    } catch (error) {
+        console.error('تعذر حظر الجهاز:', error);
+        alert('❌ تعذر تنفيذ حظر الجهاز.');
+    }
+}
+
+async function restoreDeviceAccess(phone, deviceId) {
+    if (!moderationActionReady()) return;
+    if (!confirm('هل تريد إعادة السماح لهذا الجهاز باستخدام التطبيق؟')) return;
+    try {
+        await db.ref(`users/${phone}/devices/${deviceId}`).update({
+            status: 'active',
+            suspendedUntil: 0,
+            reason: '',
+            restoredAt: Date.now(),
+            restoredBy: ADMIN_PHONE
+        });
+        await sendMemberModerationNotification(phone, '✅ تمت إعادة تفعيل جهازك', `تم إلغاء الإيقاف/الحظر عن الجهاز (${deviceId})، يمكنك استخدامه مجدداً.`, { deviceId });
+        alert('✅ تمت إعادة تفعيل الجهاز.');
+        loadUsersDevicesData();
+    } catch (error) {
+        console.error('تعذر إعادة تفعيل الجهاز:', error);
+        alert('❌ تعذر إعادة التفعيل.');
+    }
+}
+
+// ==========================================================================
 // 18. وظائف الموافقة على الأجهزة (للمشرف)
 // ==========================================================================
 function approveDevice(pendingKey, phone, deviceId) {
@@ -1199,6 +1354,25 @@ async function loadBannerLocallyOrOnline(forceFetch = false) {
         console.error("خطأ في جلب بيانات الإعلان:", e);
         if (localBanner) renderBanner(JSON.parse(localBanner));
     }
+}
+
+// تحديث تلقائي فوري لحاوية الإعلانات عند نشر تحديث جديد من المشرف أبو جراح
+let bannerLiveListenerAttached = false;
+function listenBannerLive() {
+    if (bannerLiveListenerAttached || !db || !navigator.onLine) return;
+    bannerLiveListenerAttached = true;
+    db.ref('current_banner').on('value', (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        let cached = null;
+        try { cached = JSON.parse(localStorage.getItem('cached_banner_data') || 'null'); } catch (e) {}
+        // لا تحديث إن لم يوجد تعميم جديد فعلياً من المشرف
+        if (cached && cached.id === data.id) return;
+        localStorage.setItem('cached_banner_data', JSON.stringify(data));
+        renderBanner(data);
+    }, (error) => {
+        console.warn('تعذر متابعة تحديث الإعلانات تلقائياً:', error);
+    });
 }
 
 function renderBanner(data) {
