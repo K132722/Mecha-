@@ -44,6 +44,12 @@ let isFirstLoad = true; // لمنع تكرار التحقق
 let presenceHeartbeat = null;
 let bannerLiveListener = null;
 let lastLiveBannerId = null;
+let dailyBanners = [];
+let currentBannerIndex = 0;
+let bannerRotationTimer = null;
+let bannerDayKey = '';
+let bannerTouchStartY = null;
+let editingBannerId = null;
 let notificationLiveListener = null;
 const USAGE_POLICY_VERSION = '1';
 const USAGE_POLICY_SEEN_PREFIX = 'usage_policy_seen_v';
@@ -166,20 +172,18 @@ function stopPresenceTracking() {
 }
 
 function listenToLiveBanner() {
-    if (!db || bannerLiveListener) return;
-    bannerLiveListener = db.ref('current_banner');
+    if (!db || !currentUser) return;
+    const dayKey = getBannerDayKey();
+    if (bannerLiveListener && bannerDayKey === dayKey) return;
+    if (bannerLiveListener) {
+        bannerLiveListener.off();
+        bannerLiveListener = null;
+    }
+    bannerDayKey = dayKey;
+    bannerLiveListener = db.ref(`daily_banners/${dayKey}`);
     bannerLiveListener.on('value', snapshot => {
-        const banner = snapshot.val();
-        if (!banner) return;
-        const bannerId = String(banner.id || banner.updatedAt || banner.timestamp || '');
-        const isNew = Boolean(lastLiveBannerId && bannerId && bannerId !== lastLiveBannerId);
-        lastLiveBannerId = bannerId;
-        localStorage.setItem('cached_banner_data', JSON.stringify(banner));
-        renderBanner(banner);
-        if (isNew && currentUser) {
-            const date = document.getElementById('bannerDate');
-            if (date) date.innerHTML = `${banner.timestamp || ''} <span class="live-update-pill">محدث الآن</span>`;
-        }
+        const value = snapshot.val() || {};
+        setDailyBanners(Object.values(value).map(normalizeBanner).filter(Boolean), true);
     });
 }
 
@@ -684,11 +688,9 @@ function launchAppDirectly() {
     document.getElementById('userRoleDisplay').innerText = isAdmin ? 'مدير النظام' : 'عضو معتمد';
     document.getElementById('deviceIdDisplay').innerText = `📱 المعرف: ${currentUser.deviceId || 'غير معروف'}`;
 
-    // إظهار/إخفاء الأزرار حسب الصلاحيات
-    const adminBtn = document.getElementById('btnAdminAddBanner');
-    if (adminBtn) {
-        adminBtn.style.display = isAdmin ? 'inline-block' : 'none';
-    }
+    // جميع الأعضاء يستطيعون نشر منشور واحد يومياً، بينما تبقى صلاحيات الإدارة كما هي.
+    const bannerAddBtn = document.getElementById('btnAdminAddBanner');
+    if (bannerAddBtn) bannerAddBtn.style.display = 'inline-flex';
 
     const usersDataCard = document.getElementById('btnUsersData');
     if (usersDataCard) {
@@ -1377,45 +1379,209 @@ function rejectDevice(pendingKey, phone) {
 // ==========================================================================
 // 19. إدارة حاوية الإعلانات
 // ==========================================================================
-async function loadBannerLocallyOrOnline(forceFetch = false) {
-    const localBanner = localStorage.getItem('cached_banner_data');
+function getBannerDayKey(timestamp = Date.now()) {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
-    if (!navigator.onLine || !db || (!forceFetch && localBanner)) {
-        if (localBanner) {
-            renderBanner(JSON.parse(localBanner));
-        } else {
-            document.getElementById('bannerDisplayArea').innerHTML = '<div class="empty-banner">لا توجد إعلانات محفوظة محلياً.</div>';
-        }
-        return;
+function bannerCacheKey(dayKey = getBannerDayKey()) {
+    return `cached_daily_banners_${dayKey}`;
+}
+
+function bannerAuthorKey(phone = currentUser?.phone) {
+    return String(phone || 'unknown').replace(/[^\dA-Za-z_-]/g, '_');
+}
+
+function bannerPath(dayKey, bannerId) {
+    return `daily_banners/${dayKey}/${bannerId}`;
+}
+
+function normalizeBanner(data) {
+    if (!data || typeof data !== 'object') return null;
+    const createdAt = Number(data.createdAt || data.updatedAt || Date.now());
+    return {
+        ...data,
+        id: String(data.id || bannerAuthorKey(data.authorPhone)),
+        title: String(data.title || ''),
+        text: String(data.text || ''),
+        link: String(data.link || ''),
+        img: String(data.img || ''),
+        authorPhone: String(data.authorPhone || ''),
+        authorName: String(data.authorName || 'عضو المنظومة'),
+        createdAt,
+        updatedAt: Number(data.updatedAt || createdAt),
+        dateKey: data.dateKey || getBannerDayKey(createdAt),
+        timestamp: data.timestamp || new Date(createdAt).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })
+    };
+}
+
+function escapeBannerHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
+}
+
+function safeBannerLink(value) {
+    const link = String(value || '').trim();
+    return /^https?:\/\//i.test(link) ? link : '';
+}
+
+function canManageBanner(banner) {
+    if (!banner || !currentUser) return false;
+    return isAdminAccount() || String(banner.authorPhone) === String(currentUser.phone);
+}
+
+function setDailyBanners(items, fromLiveUpdate = false) {
+    const nextItems = (items || [])
+        .map(normalizeBanner)
+        .filter(item => item && item.dateKey === getBannerDayKey())
+        .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+
+    const currentId = dailyBanners[currentBannerIndex]?.id;
+    dailyBanners = nextItems;
+    if (currentId) {
+        const nextIndex = dailyBanners.findIndex(item => item.id === currentId);
+        currentBannerIndex = nextIndex >= 0 ? nextIndex : Math.min(currentBannerIndex, Math.max(dailyBanners.length - 1, 0));
+    } else {
+        currentBannerIndex = Math.min(currentBannerIndex, Math.max(dailyBanners.length - 1, 0));
     }
 
     try {
-        const snap = await db.ref('current_banner').once('value');
-        const onlineBanner = snap.val();
+        localStorage.setItem(bannerCacheKey(), JSON.stringify(dailyBanners));
+    } catch (error) {}
 
-        if (onlineBanner) {
-            localStorage.setItem('cached_banner_data', JSON.stringify(onlineBanner));
-            renderBanner(onlineBanner);
-            if (forceFetch) alert('✅ تم تحديث الإعلان وحفظه محلياً بنجاح!');
-        } else {
-            document.getElementById('bannerDisplayArea').innerHTML = '<div class="empty-banner">لا توجد إعلانات حالياً.</div>';
-        }
-    } catch (e) {
-        console.error("خطأ في جلب بيانات الإعلان:", e);
-        if (localBanner) renderBanner(JSON.parse(localBanner));
+    renderCurrentBanner(fromLiveUpdate ? 'live' : 'replace');
+    startBannerRotation();
+}
+
+function renderBannerEmpty(message = 'لا توجد إعلانات منشورة اليوم.') {
+    const area = document.getElementById('bannerDisplayArea');
+    const date = document.getElementById('bannerDate');
+    const counter = document.getElementById('bannerCounter');
+    if (date) date.innerText = 'اليوم';
+    if (counter) counter.innerText = '0 / 0';
+    if (area) area.innerHTML = `<div class="empty-banner">${escapeBannerHtml(message)}</div>`;
+    ['btnBannerPrev', 'btnBannerNext'].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) button.disabled = true;
+    });
+}
+
+function renderCurrentBanner(animation = 'replace') {
+    const area = document.getElementById('bannerDisplayArea');
+    const counter = document.getElementById('bannerCounter');
+    const prev = document.getElementById('btnBannerPrev');
+    const next = document.getElementById('btnBannerNext');
+    if (!area) return;
+
+    if (!dailyBanners.length) {
+        renderBannerEmpty();
+        return;
+    }
+
+    currentBannerIndex = Math.max(0, Math.min(currentBannerIndex, dailyBanners.length - 1));
+    const banner = dailyBanners[currentBannerIndex];
+    const link = safeBannerLink(banner.link);
+    const authorLabel = escapeBannerHtml(banner.authorName);
+    const title = escapeBannerHtml(banner.title);
+    const text = escapeBannerHtml(banner.text).replace(/\n/g, '<br>');
+    const image = banner.img
+        ? `<img class="banner-image" src="${escapeBannerHtml(banner.img)}" alt="${title || 'صورة الإعلان'}">`
+        : '';
+    const editActions = canManageBanner(banner)
+        ? `<div class="banner-owner-actions">
+                <button type="button" class="banner-action-btn edit" onclick="openBannerEditor('${escapeBannerHtml(banner.id)}')">✎ تعديل</button>
+                <button type="button" class="banner-action-btn delete" onclick="deleteBanner('${escapeBannerHtml(banner.id)}')">حذف</button>
+           </div>`
+        : '';
+
+    area.innerHTML = `
+        <article class="banner-slide ${animation === 'next' ? 'slide-from-bottom' : animation === 'prev' ? 'slide-from-top' : animation === 'live' ? 'slide-live' : ''}">
+            <div class="banner-meta">
+                <span class="banner-author">نشره: <strong>${authorLabel}</strong></span>
+                <span class="banner-time">${escapeBannerHtml(banner.timestamp)}</span>
+            </div>
+            ${title ? `<h4>${title}</h4>` : ''}
+            ${text ? `<p>${text}</p>` : ''}
+            ${image}
+            ${link ? `<a class="banner-link" href="${escapeBannerHtml(link)}" target="_blank" rel="noopener noreferrer">🔗 فتح الرابط المرفق</a>` : ''}
+            <div class="banner-footer">${editActions}<span class="banner-day-label">يختفي تلقائياً عند انتهاء اليوم</span></div>
+        </article>
+    `;
+
+    const date = document.getElementById('bannerDate');
+    if (date) date.innerHTML = `${escapeBannerHtml(banner.timestamp)} <span class="live-update-pill">منشور اليوم</span>`;
+    if (counter) counter.innerText = `${currentBannerIndex + 1} / ${dailyBanners.length}`;
+    if (prev) prev.disabled = dailyBanners.length < 2;
+    if (next) next.disabled = dailyBanners.length < 2;
+}
+
+function showBannerAt(index, direction = 'next') {
+    if (!dailyBanners.length) return;
+    currentBannerIndex = (index + dailyBanners.length) % dailyBanners.length;
+    renderCurrentBanner(direction);
+}
+
+function startBannerRotation() {
+    clearInterval(bannerRotationTimer);
+    bannerRotationTimer = null;
+    if (dailyBanners.length < 2) return;
+    bannerRotationTimer = setInterval(() => {
+        showBannerAt(currentBannerIndex + 1, 'next');
+    }, 5000);
+}
+
+async function cleanupExpiredBanners(dayKey = getBannerDayKey()) {
+    if (!db || !navigator.onLine) return;
+    try {
+        const snapshot = await db.ref('daily_banners').once('value');
+        const allDays = snapshot.val() || {};
+        const updates = {};
+        Object.keys(allDays).filter(key => key < dayKey).forEach(key => {
+            updates[`daily_banners/${key}`] = null;
+        });
+        if (Object.keys(updates).length) await db.ref().update(updates);
+    } catch (error) {
+        // انتهاء الصلاحية لا يمنع المستخدم من رؤية منشورات اليوم إذا تعذر الحذف الشبكي.
     }
 }
 
-function renderBanner(data) {
-    document.getElementById('bannerDate').innerText = data.timestamp || '';
-    let html = `<h4>${data.title || ''}</h4><p>${data.text || ''}</p>`;
-    if (data.img) html += `<img src="${data.img}" style="width:100%; border-radius:12px; margin-top:8px;">`;
-    if (data.link) html += `<br><a href="${data.link}" target="_blank" style="color:var(--gold); font-weight:bold; display:inline-block; margin-top:6px;">🔗 فتح الرابط المرفق</a>`;
-    document.getElementById('bannerDisplayArea').innerHTML = html;
+async function loadBannerLocallyOrOnline(forceFetch = false) {
+    const dayKey = getBannerDayKey();
+    bannerDayKey = dayKey;
+    let localBanners = [];
+    try {
+        localBanners = JSON.parse(localStorage.getItem(bannerCacheKey(dayKey)) || '[]');
+    } catch (error) {}
+
+    if (localBanners.length) setDailyBanners(localBanners);
+    else renderBannerEmpty('جاري تحميل إعلانات اليوم...');
+
+    if (!navigator.onLine || !db) {
+        if (!localBanners.length) renderBannerEmpty('لا توجد إعلانات محفوظة محلياً لليوم.');
+        return;
+    }
+
+    cleanupExpiredBanners(dayKey);
+    try {
+        const snap = await db.ref(`daily_banners/${dayKey}`).once('value');
+        const onlineBanners = Object.values(snap.val() || {});
+        setDailyBanners(onlineBanners);
+        if (forceFetch) alert('✅ تم تحديث إعلانات اليوم بنجاح!');
+    } catch (error) {
+        if (!localBanners.length) renderBannerEmpty('تعذر تحميل الإعلانات حالياً.');
+    }
 }
 
 // ==========================================================================
-// 20. نشر إعلان جديد (للمشرف)
+// 20. نشر وتعديل وحذف الإعلانات اليومية
 // ==========================================================================
 document.getElementById('btnPublishBanner').addEventListener('click', async () => {
     const title = document.getElementById('bannerTitleInput').value.trim();
@@ -1426,6 +1592,8 @@ document.getElementById('btnPublishBanner').addEventListener('click', async () =
     if (!title && !text && fileInput.files.length === 0) {
         return alert('⚠️ يرجى كتابة نص أو إرفاق صورة للإعلان!');
     }
+    if (!currentUser?.phone) return alert('⚠️ يجب تسجيل الدخول أولاً.');
+    if (!db || !navigator.onLine) return alert('⚠️ يلزم الاتصال بالإنترنت لنشر الإعلان ومشاركته مع بقية الأعضاء.');
 
     let imgBase64 = '';
     if (fileInput.files.length > 0) {
@@ -1436,22 +1604,48 @@ document.getElementById('btnPublishBanner').addEventListener('click', async () =
         });
     }
 
-    const newBanner = {
-        id: 'banner_' + Date.now(),
-        title, 
-        text, 
-        link,
-        img: imgBase64,
-        timestamp: new Date().toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })
-    };
-
     try {
-        if (!db || !navigator.onLine) {
-            throw new Error('لا يوجد اتصال بقاعدة البيانات');
+        const accountStatus = await fetchAccountStatus(currentUser.phone);
+        if (!isAdminAccount() && accountStatus.canUserAddContent === false) {
+            return alert(accountStatusMessage(accountStatus) || '⚠️ تم تقييد صلاحية النشر لحسابك حالياً.');
         }
-        await db.ref('current_banner').set(newBanner);
-        localStorage.setItem('cached_banner_data', JSON.stringify(newBanner));
-        renderBanner(newBanner);
+        const dayKey = getBannerDayKey();
+        const authorId = bannerAuthorKey(currentUser.phone);
+        const targetId = editingBannerId || authorId;
+        const targetRef = db.ref(bannerPath(dayKey, targetId));
+        const currentSnapshot = await targetRef.once('value');
+        const currentBanner = normalizeBanner(currentSnapshot.val());
+
+        if (!editingBannerId && currentBanner) {
+            return alert('⚠️ لديك إعلان منشور بالفعل اليوم. يمكنك تعديله أو حذفه من نفس اللوحة.');
+        }
+        if (editingBannerId && currentBanner && !canManageBanner(currentBanner)) {
+            return alert('❌ لا يمكنك تعديل إعلان عضو آخر.');
+        }
+        if (editingBannerId && !currentBanner) {
+            return alert('⚠️ الإعلان المطلوب تعديله لم يعد موجوداً.');
+        }
+
+        const now = Date.now();
+        const newBanner = normalizeBanner({
+            id: targetId,
+            title,
+            text,
+            link: safeBannerLink(link),
+            img: imgBase64 || currentBanner?.img || '',
+            authorPhone: currentBanner?.authorPhone || currentUser.phone,
+            authorName: currentBanner?.authorName || currentUser.name,
+            createdAt: currentBanner?.createdAt || now,
+            updatedAt: now,
+            dateKey: dayKey,
+            timestamp: new Date(now).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })
+        });
+
+        await targetRef.set(newBanner);
+        const nextItems = dailyBanners.filter(item => item.id !== newBanner.id);
+        nextItems.push(newBanner);
+        currentBannerIndex = nextItems.findIndex(item => item.id === newBanner.id);
+        setDailyBanners(nextItems);
 
         document.getElementById('bannerTitleInput').value = '';
         document.getElementById('bannerTextInput').value = '';
@@ -1459,11 +1653,41 @@ document.getElementById('btnPublishBanner').addEventListener('click', async () =
         document.getElementById('bannerImgInput').value = '';
 
         closeModal('addBannerModal');
-        alert('✅ تم نشر الإعلان الجديد بنجاح!');
-    } catch (e) {
-        alert('❌ حدث خطأ أثناء النشر، تأكد من اتصال النت.');
+        editingBannerId = null;
+        document.getElementById('bannerModalTitle').innerText = '➕ إدراج إعلان / تعميم اليوم';
+        document.getElementById('btnPublishBanner').innerText = 'نشر الإعلان';
+        alert(currentBanner ? '✅ تم تعديل إعلانك بنجاح!' : '✅ تم نشر إعلانك اليوم بنجاح!');
+    } catch (error) {
+        alert('❌ حدث خطأ أثناء حفظ الإعلان، حاول مرة أخرى.');
     }
 });
+
+function openBannerEditor(bannerId) {
+    const banner = dailyBanners.find(item => item.id === String(bannerId));
+    if (!banner || !canManageBanner(banner)) return;
+    editingBannerId = banner.id;
+    document.getElementById('bannerModalTitle').innerText = '✎ تعديل إعلانك اليوم';
+    document.getElementById('btnPublishBanner').innerText = 'حفظ التعديل';
+    document.getElementById('bannerTitleInput').value = banner.title || '';
+    document.getElementById('bannerTextInput').value = banner.text || '';
+    document.getElementById('bannerLinkInput').value = banner.link || '';
+    document.getElementById('bannerImgInput').value = '';
+    openModal('addBannerModal');
+}
+
+async function deleteBanner(bannerId) {
+    const banner = dailyBanners.find(item => item.id === String(bannerId));
+    if (!banner || !canManageBanner(banner)) return alert('❌ لا يمكنك حذف هذا الإعلان.');
+    if (!confirm('هل تريد حذف إعلانك لهذا اليوم؟')) return;
+    if (!db || !navigator.onLine) return alert('⚠️ يلزم الاتصال بالإنترنت لحذف الإعلان من اللوحة.');
+    try {
+        await db.ref(bannerPath(getBannerDayKey(), banner.id)).remove();
+        setDailyBanners(dailyBanners.filter(item => item.id !== banner.id));
+        alert('✅ تم حذف الإعلان.');
+    } catch (error) {
+        alert('❌ تعذر حذف الإعلان حالياً.');
+    }
+}
 
 // ==========================================================================
 // 21. فتح نافذة الإشعارات
@@ -1592,7 +1816,43 @@ function markAllNotificationsRead() {
 // ==========================================================================
 function setupEvents() {
     document.getElementById('btnRefreshData').addEventListener('click', () => loadBannerLocallyOrOnline(true));
-    document.getElementById('btnAdminAddBanner').addEventListener('click', () => openModal('addBannerModal'));
+    document.getElementById('btnAdminAddBanner').addEventListener('click', () => {
+        editingBannerId = null;
+        document.getElementById('bannerModalTitle').innerText = '➕ إدراج إعلان / تعميم اليوم';
+        document.getElementById('btnPublishBanner').innerText = 'نشر الإعلان';
+        document.getElementById('bannerTitleInput').value = '';
+        document.getElementById('bannerTextInput').value = '';
+        document.getElementById('bannerLinkInput').value = '';
+        document.getElementById('bannerImgInput').value = '';
+        openModal('addBannerModal');
+    });
+    document.getElementById('btnBannerPrev').addEventListener('click', () => {
+        showBannerAt(currentBannerIndex - 1, 'prev');
+        startBannerRotation();
+    });
+    document.getElementById('btnBannerNext').addEventListener('click', () => {
+        showBannerAt(currentBannerIndex + 1, 'next');
+        startBannerRotation();
+    });
+    const bannerArea = document.getElementById('bannerDisplayArea');
+    if (bannerArea) {
+        bannerArea.addEventListener('mouseenter', () => clearInterval(bannerRotationTimer));
+        bannerArea.addEventListener('mouseleave', startBannerRotation);
+        bannerArea.addEventListener('touchstart', event => {
+            bannerTouchStartY = event.touches[0]?.clientY ?? null;
+            clearInterval(bannerRotationTimer);
+        }, { passive: true });
+        bannerArea.addEventListener('touchend', event => {
+            if (bannerTouchStartY === null) return;
+            const endY = event.changedTouches[0]?.clientY ?? bannerTouchStartY;
+            const delta = endY - bannerTouchStartY;
+            if (Math.abs(delta) > 35) {
+                showBannerAt(currentBannerIndex + (delta < 0 ? 1 : -1), delta < 0 ? 'next' : 'prev');
+            }
+            bannerTouchStartY = null;
+            startBannerRotation();
+        }, { passive: true });
+    }
     document.getElementById('btnUsagePolicy').addEventListener('click', () => openUsagePolicyModal(false));
 
     document.getElementById('btnStudyMaterials').addEventListener('click', () => {
@@ -1648,11 +1908,27 @@ window.addEventListener('online', () => {
     updateNetworkStatus();
     startPresenceTracking();
     listenToLiveBanner();
+    loadBannerLocallyOrOnline(true);
 });
 window.addEventListener('offline', () => {
     updateNetworkStatus();
     updatePresence(false);
 });
+
+setInterval(() => {
+    const nextDayKey = getBannerDayKey();
+    if (currentUser && bannerDayKey && nextDayKey !== bannerDayKey) {
+        dailyBanners = [];
+        currentBannerIndex = 0;
+        bannerDayKey = nextDayKey;
+        if (bannerLiveListener) {
+            bannerLiveListener.off();
+            bannerLiveListener = null;
+        }
+        loadBannerLocallyOrOnline(true);
+        listenToLiveBanner();
+    }
+}, 60000);
 
 function openModal(id) { 
     const el = document.getElementById(id);
