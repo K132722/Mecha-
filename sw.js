@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mecha-pwa-v33'; // تحسين كاش الأوفلاين ودعم الجلسة من الصفحة الرئيسية
+const CACHE_NAME = 'mecha-pwa-v35'; // تحسين كاش الأوفلاين ودعم الجلسة من الصفحة الرئيسية
 const STATIC_ASSETS = [
     './',
     './index.html',
