@@ -110,13 +110,19 @@
             <span id="bannerDate" class="banner-date">--:--</span>
         </div>
 
-        <div id="bannerDisplayArea" class="banner-display-area">
+        <div id="bannerDisplayArea" class="banner-display-area" aria-live="polite">
             <div class="empty-banner">جاري تحميل الإعلان...</div>
+        </div>
+
+        <div class="banner-navigation" aria-label="التنقل بين الإعلانات">
+            <button id="btnBannerPrev" class="banner-nav-btn" type="button" title="الإعلان السابق" aria-label="الإعلان السابق">↑</button>
+            <span id="bannerCounter" class="banner-counter">0 / 0</span>
+            <button id="btnBannerNext" class="banner-nav-btn" type="button" title="الإعلان التالي" aria-label="الإعلان التالي">↓</button>
         </div>
 
         <div class="banner-controls">
             <button id="btnRefreshData" class="glass-btn secondary-btn mini-btn">🔄 تحديث البيانات</button>
-            <button id="btnAdminAddBanner" class="glass-btn primary-btn mini-btn" style="display:none;">➕ إدراج إعلان جديد</button>
+            <button id="btnAdminAddBanner" class="glass-btn primary-btn mini-btn" style="display:none;">➕ أضف إعلانك اليوم</button>
         </div>
     </section>
 
@@ -228,7 +234,8 @@
 <!-- نافذة إضافة إعلان جديد -->
 <div class="modal-overlay" id="addBannerModal">
     <div class="glass-card modal-box">
-        <h3>➕ إدراج إعلان / تعميم جديد</h3>
+        <h3 id="bannerModalTitle">➕ إدراج إعلان / تعميم اليوم</h3>
+        <p class="banner-modal-note">يسمح لكل عضو بمنشور واحد فقط خلال اليوم، ويمكنك تعديل منشورك أو حذفه.</p>
         <input type="text" id="bannerTitleInput" placeholder="عنوان الإعلان">
         <textarea id="bannerTextInput" placeholder="تفاصيل الإعلان..."></textarea>
         <input type="text" id="bannerLinkInput" placeholder="رابط إلكتروني (اختياري)">
@@ -237,7 +244,7 @@
             <input type="file" id="bannerImgInput" accept="image/*">
         </label>
         <div class="modal-actions">
-            <button id="btnPublishBanner" class="glass-btn primary-btn">نشر واستبدال السابق</button>
+            <button id="btnPublishBanner" class="glass-btn primary-btn">نشر الإعلان</button>
             <button onclick="closeModal('addBannerModal')" class="glass-btn danger-btn">إلغاء</button>
         </div>
     </div>
